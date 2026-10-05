@@ -363,7 +363,8 @@ textarea.txt-input { resize:vertical; min-height:58px; font-family:'SF Mono','Fi
           <strong>The local runner is not running.</strong> It is the small program on your computer that calls the WealthScape APIs (a web page cannot call them directly). Start it in a terminal:
           <code>~/wealthscape-agent/run-local.sh</code>
           It opens this dashboard at <strong>http://localhost:8765</strong>. No GitHub key or login is needed.
-          <div style="margin-top:10px"><button class="btn-cancel" onclick="refreshRunner(true)">Check again</button></div>
+          <div style="margin-top:8px">Already started it? Use the local copy of this page. Your browser may block this hosted page from reaching programs on your computer, or ask for permission to "access devices on your local network" (choose Allow).</div>
+          <div style="margin-top:10px;display:flex;gap:10px"><a class="btn-trigger" style="text-decoration:none" href="http://localhost:8765/">Open local dashboard</a><button class="btn-cancel" onclick="refreshRunner(true)">Check again</button></div>
         </div>
 
         <!-- client manager -->
