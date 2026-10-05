@@ -257,6 +257,59 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
 .btn-trigger:disabled { background: var(--gray-300); cursor: not-allowed; }
 
 
+
+/* ── Results layout: client tabs, FI tiles, grouped issues ── */
+.status-banner { margin-bottom: 18px; padding: 16px 22px; }
+.ctabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.ctab { display:flex; align-items:center; gap:8px; padding:8px 13px; background:var(--white); border:1.5px solid var(--gray-200); border-radius:10px; font-size:13px; font-weight:600; color:var(--gray-700); cursor:pointer; font-family:inherit; transition:all .12s; }
+.ctab:hover { border-color:var(--gray-300); background:var(--gray-50); }
+.ctab.active { border-color:var(--purple); background:var(--purple-light); color:var(--purple-dark); }
+.ctab .sdot { width:8px; height:8px; border-radius:50%; background:var(--gray-300); flex-shrink:0; }
+.ctab .sdot.PASS{background:var(--green)} .ctab .sdot.WARN{background:var(--amber)} .ctab .sdot.FAIL{background:var(--red)}
+.ctab .cnt { font-size:11px; font-weight:600; color:var(--gray-500); }
+.panel { background:var(--white); border:1px solid var(--gray-200); border-radius:var(--radius); box-shadow:var(--shadow-sm); margin-bottom:16px; overflow:hidden; }
+.panel-hdr { padding:14px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid var(--gray-100); flex-wrap:wrap; }
+.panel-meta { font-size:12px; color:var(--gray-500); }
+.sec-title { font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--gray-500); margin:20px 0 10px; }
+.fi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px; }
+.fi-tile { background:var(--white); border:1px solid var(--gray-200); border-left:4px solid var(--gray-300); border-radius:10px; padding:12px 14px; cursor:pointer; text-align:left; font-family:inherit; transition:box-shadow .15s, transform .15s; }
+.fi-tile:hover { box-shadow:var(--shadow-md); transform:translateY(-1px); }
+.fi-tile.PASS{border-left-color:var(--green)} .fi-tile.WARN{border-left-color:var(--amber)} .fi-tile.FAIL{border-left-color:var(--red)}
+.fi-name { font-size:13px; font-weight:600; color:var(--gray-900); display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.fi-name .n { font-size:11px; font-weight:500; color:var(--gray-500); white-space:nowrap; }
+.fi-sub { font-size:12px; margin-top:5px; color:var(--gray-500); }
+.fi-sub .f{color:#B42318;font-weight:600} .fi-sub .w{color:#B54708;font-weight:600} .fi-sub .ok{color:#027A48;font-weight:600}
+.seg-bar { display:flex; height:5px; border-radius:3px; overflow:hidden; background:var(--gray-100); margin-top:9px; }
+.seg-bar i { display:block; height:100%; }
+.seg-bar .p{background:var(--green)} .seg-bar .w{background:var(--amber)} .seg-bar .f{background:var(--red)}
+.toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:20px 0 12px; }
+.seg { display:inline-flex; border:1.5px solid var(--gray-200); border-radius:8px; overflow:hidden; background:var(--white); }
+.seg button { padding:7px 12px; font-size:12px; font-weight:600; font-family:inherit; border:none; background:none; color:var(--gray-500); cursor:pointer; }
+.seg button.on { background:var(--purple-light); color:var(--purple-dark); }
+.chips { display:flex; gap:6px; flex-wrap:wrap; }
+.chip { padding:6px 11px; font-size:12px; font-weight:600; font-family:inherit; border:1.5px solid var(--gray-200); border-radius:20px; background:var(--white); color:var(--gray-700); cursor:pointer; }
+.chip.on { border-color:var(--purple); background:var(--purple-light); color:var(--purple-dark); }
+.chip span { font-weight:500; opacity:.75; margin-left:3px; }
+.search { flex:1; min-width:180px; max-width:320px; margin-left:auto; padding:7px 11px; font-size:13px; font-family:inherit; border:1.5px solid var(--gray-200); border-radius:8px; outline:none; background:var(--white); }
+.search:focus { border-color:var(--purple); }
+.tool-btn { padding:7px 12px; font-size:12px; font-weight:600; font-family:inherit; border:1.5px solid var(--gray-200); border-radius:8px; background:var(--white); color:var(--gray-700); cursor:pointer; }
+.tool-btn:hover { background:var(--gray-100); }
+.grp { background:var(--white); border:1px solid var(--gray-200); border-radius:10px; margin-bottom:10px; overflow:hidden; scroll-margin-top:80px; }
+.grp-hdr { display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; }
+.grp-hdr:hover { background:var(--gray-50); }
+.grp-name { flex:1; font-size:14px; font-weight:600; color:var(--gray-900); }
+.pill { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+.pill.f{background:var(--red-light);color:#B42318} .pill.w{background:var(--amber-light);color:#B54708} .pill.p{background:var(--green-light);color:#027A48} .pill.u{background:var(--gray-100);color:var(--gray-500)}
+.grp-body { display:none; border-top:1px solid var(--gray-100); background:var(--gray-50); }
+.grp.open .grp-body { display:block; }
+.grp.open .chevron { transform:rotate(90deg); }
+.grp .check-main { padding-left:16px; }
+.grp .check-ctas { padding-left:44px; }
+.grp .detail-panel, .grp .ticket-panel { margin-left:44px; }
+.tag { display:inline-block; font-size:10px; font-weight:600; color:var(--gray-500); background:var(--gray-100); border-radius:4px; padding:1px 6px; margin-left:6px; }
+.tag.neg { color:#93370D; background:var(--amber-light); }
+.none-card { background:var(--white); border:1px dashed var(--gray-300); border-radius:10px; padding:28px; text-align:center; font-size:13px; color:var(--gray-500); }
+
 /* ── Local runner / client manager ── */
 .modal.wide { width: 640px; max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
 .modal.wide .modal-body { overflow-y: auto; }
@@ -649,7 +702,7 @@ Dashboard: https://github.com/adityasingh42069/wealthscape-qa-dashboard`;
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function escAttr(s){ return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
 
-function renderCheck(check, clientName, environment) {
+function renderCheck(check, clientName, environment, tags) {
   const isBad = check.status === 'FAIL' || check.status === 'WARN';
   const uid = `${clientName.replace(/\s/g,'')}-${environment}-${Math.random().toString(36).slice(2,6)}`;
 
@@ -685,7 +738,7 @@ function renderCheck(check, clientName, environment) {
       <div class="check-main">
         <div class="cdot ${check.status}">${SI[check.status]||'?'}</div>
         <div class="cbody">
-          <div class="cid">${esc(check.check_id)}</div>
+          <div class="cid">${esc(check.check_id)}${tags||''}</div>
           <div class="cdesc">${esc(check.description)}</div>
           ${check.details ? `<div class="cdetail">${esc(check.details)}${check.tolerance ? ` &nbsp;·&nbsp; Tolerance: ${esc(check.tolerance)}` : ''}</div>` : ''}
         </div>
@@ -744,41 +797,56 @@ function formatDate(iso) {
 }
 function dur(s,e){ if(!s||!e)return'—'; const sec=Math.round((new Date(e)-new Date(s))/1000); return sec<60?`${sec}s`:`${Math.floor(sec/60)}m ${sec%60}s`; }
 
-function renderPhase(phase, pi, ci, cn, env) {
-  const id=`cl-${ci}-${pi}`, pct=phase.total>0?phase.passed/phase.total*100:0;
-  const checks = phase.checks.map(c=>renderCheck(c,cn,env)).join('');
-  return `
-    <div class="phase-row" onclick="toggleChecks('${id}',this)">
-      <div class="pnum ${phase.status}">P${phase.phase_number}</div>
-      <span class="phase-name">${esc(phase.phase_name)}</span>
-      <div class="phase-prog"><div class="ppf ${phase.status}" style="width:${pct}%"></div></div>
-      <span class="phase-cnt">${phase.passed}/${phase.total}</span>
-      <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
-    </div>
-    <div class="checks-list" id="${id}">${checks||'<div style="padding:10px 56px;font-size:12px;color:#667085">No checks recorded</div>'}</div>`;
+// ── Results view ───────────────────────────────────────────────
+// One client/user at a time; its checks grouped by FI type (or by phase), issues first.
+const FI_ORDER = ['Mutual Funds','Equities','ETFs','Equities & ETFs','Bank Accounts','Term Deposits','Recurring Deposits','NPS','REIT / InvIT / AIF / CIS','Insurance','F&O','Net Worth','Linked Accounts & Consents','Insights Console','Platform'];
+const FI_BY_ID = [['BR-EQ','Equities'],['BR-ETF','ETFs'],['BR-SEC','Equities & ETFs'],['BR-DEP','Bank Accounts'],['BR-TD','Term Deposits'],['BR-RD','Recurring Deposits'],['BR-NPS','NPS'],['BR-NW','Net Worth'],['BR-GLA','Linked Accounts & Consents'],['BR-CON','Linked Accounts & Consents'],['BR-LI','Insurance'],['BR-GI','Insurance']];
+const SEV = { FAIL:0, WARN:1, UNAVAILABLE:2, SKIP:3, PASS:4 };
+let _report = null, _checks = [];
+const _view = { ci:0, group:'fi', filter:'issues', q:'' };
+let _openGroups = {};   // explicit open/closed choices, keyed by group name
+
+function fiOf(check, phase) {   // reports written before FI tagging carry no fi_type
+  if (check.fi_type) return check.fi_type;
+  if (phase.phase_number >= 1 && phase.phase_number <= 5) return 'Mutual Funds';
+  const hit = FI_BY_ID.find(([p]) => (check.check_id || '').startsWith(p));
+  return hit ? hit[1] : 'Platform';
 }
 
-function renderClient(c, i) {
-  const pr=c.total_checks>0?Math.round(c.passed/c.total_checks*100):0;
-  const bs=c.failed>0?'FAIL':c.warnings>0?'WARN':'PASS';
-  return `
-    <div class="client-card">
-      <div class="card-hdr">
-        <div class="card-title">${esc(c.name)}<span class="env-badge ${c.environment}">${c.environment}</span></div>
-        <span class="sbadge ${c.status}">${c.status}</span>
-      </div>
-      <div class="card-stats">
-        <div class="stat-cell"><span class="num tot">${c.total_checks}</span><span class="lbl">Checks</span></div>
-        <div class="stat-cell"><span class="num pass">${c.passed}</span><span class="lbl">Passed</span></div>
-        <div class="stat-cell"><span class="num warn">${c.warnings}</span><span class="lbl">Warnings</span></div>
-        <div class="stat-cell"><span class="num fail">${c.failed}</span><span class="lbl">Failed</span></div>
-        <div class="stat-cell"><span class="num pur">${pr}%</span><span class="lbl">Pass Rate</span></div>
-        <div class="stat-cell"><span class="num tot" style="font-size:14px">${dur(c.run_started,c.run_completed)}</span><span class="lbl">Duration</span></div>
-      </div>
-      <div class="pass-bar-wrap"><div class="pass-bar"><div class="pbf ${bs}" style="width:${pr}%"></div></div><span class="pass-bar-lbl">${c.passed} of ${c.total_checks} passed</span></div>
-      <div class="phases-list">${c.phases.map((p,pi)=>renderPhase(p,pi,i,c.name,c.environment)).join('')}</div>
-    </div>`;
+function flatten(client) {
+  return (client.phases || []).flatMap(p => (p.checks || []).map(c => Object.assign({}, c, {
+    _fi: fiOf(c, p), _phase: `P${p.phase_number} · ${p.phase_name}`, _pn: p.phase_number, _neg: /^Negative/.test(p.phase_name),
+  })));
 }
+function tally(list) {
+  const t = { FAIL:0, WARN:0, PASS:0, other:0, total:list.length };
+  list.forEach(c => { if (c.status in t) t[c.status]++; else t.other++; });
+  t.status = t.FAIL ? 'FAIL' : t.WARN ? 'WARN' : t.PASS ? 'PASS' : 'UNAVAILABLE';
+  return t;
+}
+function matches(c) {
+  const f = _view.filter;
+  if (f === 'issues' && c.status !== 'FAIL' && c.status !== 'WARN') return false;
+  if (f === 'failed' && c.status !== 'FAIL') return false;
+  if (f === 'warnings' && c.status !== 'WARN') return false;
+  if (f === 'passed' && c.status !== 'PASS') return false;
+  if (_view.q) { const q = _view.q.toLowerCase(); if (!`${c.check_id} ${c.description} ${c.details} ${c._fi}`.toLowerCase().includes(q)) return false; }
+  return true;
+}
+function groupsOf(list) {
+  const key = _view.group === 'fi' ? '_fi' : '_phase';
+  const map = new Map();
+  list.forEach(c => { if (!map.has(c[key])) map.set(c[key], []); map.get(c[key]).push(c); });
+  let names = [...map.keys()];
+  if (_view.group === 'fi') names.sort((a, b) => (FI_ORDER.indexOf(a) + 100) % 100 - (FI_ORDER.indexOf(b) + 100) % 100 || a.localeCompare(b));
+  else names.sort((a, b) => map.get(a)[0]._pn - map.get(b)[0]._pn);
+  return names.map(n => ({ name: n, checks: map.get(n) }));
+}
+function pills(t) {
+  return (t.FAIL ? `<span class="pill f">${t.FAIL} failed</span>` : '') + (t.WARN ? `<span class="pill w">${t.WARN} warning${t.WARN !== 1 ? 's' : ''}</span>` : '')
+    + (t.PASS ? `<span class="pill p">${t.PASS} passed</span>` : '') + (t.other ? `<span class="pill u">${t.other} not run</span>` : '');
+}
+function gid(name) { return 'grp-' + name.replace(/[^A-Za-z0-9]+/g, '-'); }
 
 function renderDashboard(data) {
   _reportDate = formatDate(data.run_started);
@@ -786,30 +854,129 @@ function renderDashboard(data) {
   const pr=data.total_checks>0?Math.round(data.passed/data.total_checks*100):0;
   const icon={PASS:'✓',FAIL:'✕',WARN:'!',UNAVAILABLE:'?'}[s]||'?';
   const title={PASS:'All Checks Passed',FAIL:'Failures Detected',WARN:'Warnings Found',UNAVAILABLE:'No Data'}[s]||s;
+  const n=(data.clients||[]).length;
   document.getElementById('last-updated').textContent=`Last run: ${_reportDate}`;
   return `
     <div class="status-banner ${s}">
       <div class="banner-left"><div class="banner-icon">${icon}</div>
-        <div><div class="banner-title">${title}</div><div class="banner-sub">Run ${data.run_id||'—'} &nbsp;·&nbsp; ${_reportDate} &nbsp;·&nbsp; ${dur(data.run_started,data.run_completed)}</div></div>
+        <div><div class="banner-title">${title}</div><div class="banner-sub">${_reportDate} &nbsp;·&nbsp; ${dur(data.run_started,data.run_completed)} &nbsp;·&nbsp; ${n} user${n!==1?'s':''} tested &nbsp;·&nbsp; run ${esc(data.run_id||'—')}</div></div>
       </div>
       <div class="banner-stats">
-        <div class="bstat"><span class="val n">${data.total_checks||0}</span><span class="lbl">Total</span></div>
+        <div class="bstat"><span class="val n">${data.total_checks||0}</span><span class="lbl">Checks</span></div>
         <div class="bstat"><span class="val pass">${data.passed||0}</span><span class="lbl">Passed</span></div>
         <div class="bstat"><span class="val warn">${data.warnings||0}</span><span class="lbl">Warnings</span></div>
         <div class="bstat"><span class="val fail">${data.failed||0}</span><span class="lbl">Failed</span></div>
         <div class="bstat"><span class="val p">${pr}%</span><span class="lbl">Pass Rate</span></div>
       </div>
     </div>
-    <div class="section-hdr">
-      <div class="section-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#344054" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Environment Results</div>
-      <span style="font-size:12px;color:#667085">${(data.clients||[]).length} environment${(data.clients||[]).length!==1?'s':''} tested</span>
-    </div>
-    <div class="clients-grid">${(data.clients||[]).map(renderClient).join('')}</div>`;
+    <div class="ctabs" id="ctabs"></div>
+    <div id="client-view"></div>`;
 }
 
-function toggleChecks(id,row){
-  document.getElementById(id)?.classList.toggle('open');
-  row.querySelector('.chevron')?.classList.toggle('open');
+function renderClientView() {
+  const clients = _report.clients || [];
+  document.getElementById('ctabs').innerHTML = clients.map((c, i) => {
+    const issues = c.failed + c.warnings, st = c.failed ? 'FAIL' : c.warnings ? 'WARN' : 'PASS';
+    return `<button class="ctab ${i === _view.ci ? 'active' : ''}" onclick="selectClient(${i})"><span class="sdot ${st}"></span>${esc(c.name)}<span class="env-badge ${c.environment}">${c.environment}</span><span class="cnt">${issues ? issues + ' issue' + (issues !== 1 ? 's' : '') : 'clean'}</span></button>`;
+  }).join('');
+  const c = clients[_view.ci];
+  _checks = flatten(c);
+  const pr = c.total_checks > 0 ? Math.round(c.passed / c.total_checks * 100) : 0;
+  document.getElementById('client-view').innerHTML = `
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="card-title">${esc(c.name)}<span class="env-badge ${c.environment}">${c.environment}</span><span class="sbadge ${c.status}">${c.status}</span></div>
+        <div class="panel-meta">${formatDate(c.run_started)} &nbsp;·&nbsp; ${dur(c.run_started, c.run_completed)}</div>
+      </div>
+      <div class="card-stats" style="border-bottom:none">
+        <div class="stat-cell"><span class="num tot">${c.total_checks}</span><span class="lbl">Checks</span></div>
+        <div class="stat-cell"><span class="num pass">${c.passed}</span><span class="lbl">Passed</span></div>
+        <div class="stat-cell"><span class="num warn">${c.warnings}</span><span class="lbl">Warnings</span></div>
+        <div class="stat-cell"><span class="num fail">${c.failed}</span><span class="lbl">Failed</span></div>
+        <div class="stat-cell"><span class="num pur">${pr}%</span><span class="lbl">Pass Rate</span></div>
+      </div>
+    </div>
+    <div class="sec-title">By FI type</div>
+    <div class="fi-grid" id="fi-grid"></div>
+    <div class="toolbar">
+      <div class="seg"><button id="g-fi" onclick="setGroup('fi')">By FI type</button><button id="g-phase" onclick="setGroup('phase')">By phase</button></div>
+      <div class="chips" id="chips"></div>
+      <input class="search" id="search" placeholder="Search checks…" value="${esc(_view.q)}" oninput="_view.q=this.value;renderGroups()">
+      <button class="tool-btn" onclick="copyIssues(this)">Copy issue summary</button>
+    </div>
+    <div id="grp-list"></div>`;
+  // FI tiles always show the full picture, whatever the filter
+  const saved = _view.group; _view.group = 'fi';
+  document.getElementById('fi-grid').innerHTML = groupsOf(_checks).map(g => {
+    const t = tally(g.checks), w = n => (t.total ? n / t.total * 100 : 0);
+    const sub = (t.FAIL || t.WARN)
+      ? [t.FAIL ? `<span class="f">${t.FAIL} failed</span>` : '', t.WARN ? `<span class="w">${t.WARN} warning${t.WARN !== 1 ? 's' : ''}</span>` : ''].filter(Boolean).join(' · ')
+      : (t.PASS ? `<span class="ok">All passed</span>` : 'Not run');
+    return `<button class="fi-tile ${t.status}" onclick="jumpToFi('${escAttr(g.name)}')"><div class="fi-name">${esc(g.name)}<span class="n">${t.total} checks</span></div><div class="fi-sub">${sub}</div><div class="seg-bar"><i class="f" style="width:${w(t.FAIL)}%"></i><i class="w" style="width:${w(t.WARN)}%"></i><i class="p" style="width:${w(t.PASS)}%"></i></div></button>`;
+  }).join('');
+  _view.group = saved;
+  renderGroups();
+}
+
+function renderGroups() {
+  const t = tally(_checks);
+  document.getElementById('g-fi').classList.toggle('on', _view.group === 'fi');
+  document.getElementById('g-phase').classList.toggle('on', _view.group === 'phase');
+  document.getElementById('chips').innerHTML = [['issues','Issues',t.FAIL + t.WARN],['failed','Failed',t.FAIL],['warnings','Warnings',t.WARN],['passed','Passed',t.PASS],['all','All',t.total]]
+    .map(([k, l, n]) => `<button class="chip ${_view.filter === k ? 'on' : ''}" onclick="setFilter('${k}')">${l}<span>${n}</span></button>`).join('');
+  const c = _report.clients[_view.ci];
+  const shown = _checks.filter(matches);
+  const groups = groupsOf(shown);
+  const defaultOpen = _view.filter !== 'all' && _view.filter !== 'passed' || !!_view.q;
+  const el = document.getElementById('grp-list');
+  if (!groups.length) {
+    el.innerHTML = `<div class="none-card">${_view.q ? 'No checks match your search.' : (_view.filter === 'issues' || _view.filter === 'failed' || _view.filter === 'warnings') ? `Nothing here — no ${_view.filter === 'issues' ? 'issues' : _view.filter} for this user. ${t.PASS} checks passed.` : 'No checks to show.'}</div>`;
+    return;
+  }
+  el.innerHTML = groups.map(g => {
+    const all = _checks.filter(x => (_view.group === 'fi' ? x._fi : x._phase) === g.name);
+    const open = g.name in _openGroups ? _openGroups[g.name] : defaultOpen;
+    const rows = g.checks.slice().sort((a, b) => (SEV[a.status] ?? 2) - (SEV[b.status] ?? 2)).map(x => {
+      const tags = `<span class="tag">${esc(_view.group === 'fi' ? x._phase : x._fi)}</span>${x._neg ? '<span class="tag neg">Negative test</span>' : ''}`;
+      return renderCheck(x, c.name, c.environment, tags);
+    }).join('');
+    return `<div class="grp ${open ? 'open' : ''}" id="${gid(g.name)}">
+      <div class="grp-hdr" onclick="toggleGroup('${escAttr(g.name)}')">
+        <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="grp-name">${esc(g.name)}</span>${pills(tally(all))}
+      </div>
+      <div class="grp-body">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectClient(i) { _view.ci = i; _openGroups = {}; renderClientView(); }
+function setGroup(g) { _view.group = g; _openGroups = {}; renderGroups(); }
+function setFilter(f) { _view.filter = f; _openGroups = {}; renderGroups(); }
+function toggleGroup(name) {
+  const el = document.getElementById(gid(name)); if (!el) return;
+  _openGroups[name] = !el.classList.contains('open'); el.classList.toggle('open');
+}
+function jumpToFi(name) {
+  _view.group = 'fi'; _view.q = ''; document.getElementById('search').value = '';
+  const t = tally(_checks.filter(x => x._fi === name));
+  if (!(t.FAIL + t.WARN) && _view.filter !== 'all') _view.filter = 'all';   // a clean FI type has nothing under "Issues"
+  _openGroups = { [name]: true };
+  renderGroups();
+  document.getElementById(gid(name))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function copyIssues(btn) {
+  const c = _report.clients[_view.ci];
+  const saved = _view.group; _view.group = 'fi';
+  const groups = groupsOf(_checks.filter(x => x.status === 'FAIL' || x.status === 'WARN'));
+  _view.group = saved;
+  const lines = [`${c.name} (${c.environment}) — ${c.failed} failed, ${c.warnings} warnings, ${c.passed} passed — ${_reportDate}`];
+  groups.forEach(g => {
+    lines.push('', g.name);
+    g.checks.slice().sort((a, b) => SEV[a.status] - SEV[b.status]).forEach(x => lines.push(`  [${x.status}] ${x.check_id} ${x.description}${x.details ? ' — ' + x.details : ''}`));
+  });
+  if (!groups.length) lines.push('', 'No issues.');
+  navigator.clipboard.writeText(lines.join('\n')).then(() => { const o = btn.textContent; btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = o, 1800); });
 }
 
 // ── Local runner ───────────────────────────────────────────────
@@ -854,7 +1021,13 @@ function showReport(data) {
     document.getElementById('last-updated').textContent = 'No runs yet';
     return;
   }
+  _report = data;
+  const firstBad = data.clients.findIndex(c => c.failed > 0);
+  _view.ci = Math.min(_view.ci, data.clients.length - 1);
+  if (firstBad >= 0 && !data.clients[_view.ci].failed) _view.ci = firstBad;
+  _openGroups = {};
   document.getElementById('main-content').innerHTML = renderDashboard(data);
+  renderClientView();
 }
 
 async function loadReport(){
