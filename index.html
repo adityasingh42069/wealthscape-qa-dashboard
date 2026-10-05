@@ -256,6 +256,39 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
 .btn-trigger:hover { background: var(--purple-dark); }
 .btn-trigger:disabled { background: var(--gray-300); cursor: not-allowed; }
 
+
+/* ── Local runner / client manager ── */
+.modal.wide { width: 640px; max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.modal.wide .modal-body { overflow-y: auto; }
+.runner-badge { display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; padding:6px 11px; border-radius:20px; background:var(--gray-100); color:var(--gray-500); border:1px solid var(--gray-200); }
+.runner-badge .dot { width:7px; height:7px; border-radius:50%; background:var(--gray-400); }
+.runner-badge.on { background:var(--green-light); color:#027A48; border-color:transparent; }
+.runner-badge.on .dot { background:#12B76A; }
+.runner-off { background:var(--amber-light); border-radius:8px; padding:13px 15px; font-size:12.5px; color:#93370D; line-height:1.55; }
+.runner-off code { display:block; margin:8px 0; padding:8px 10px; background:#fff; border:1px solid var(--gray-200); border-radius:6px; font-family:'SF Mono','Fira Code',monospace; font-size:12px; color:var(--gray-900); user-select:all; }
+.cl-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1.5px solid var(--gray-200); border-radius:8px; margin-bottom:8px; }
+.cl-row input[type=checkbox] { width:15px; height:15px; accent-color:var(--purple); cursor:pointer; flex-shrink:0; }
+.cl-main { flex:1; min-width:0; }
+.cl-name { font-size:13px; font-weight:600; color:var(--gray-900); display:flex; align-items:center; gap:7px; }
+.cl-meta { font-size:11.5px; color:var(--gray-500); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cl-btn { background:none; border:none; cursor:pointer; font-size:12px; font-weight:600; color:var(--purple); padding:4px 6px; font-family:inherit; }
+.cl-btn.del { color:var(--red); }
+.cl-empty { font-size:12.5px; color:var(--gray-500); padding:6px 0 12px; }
+.cl-form { border:1.5px solid var(--gray-200); border-radius:10px; padding:14px; margin-top:10px; display:none; }
+.cl-form.open { display:block; }
+.cl-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
+.cl-grid .full { grid-column:1 / -1; }
+.txt-input { width:100%; padding:8px 11px; font-size:13px; font-family:inherit; border:1.5px solid var(--gray-300); border-radius:8px; outline:none; background:var(--white); color:var(--gray-900); }
+.txt-input:focus { border-color:var(--purple); box-shadow:0 0 0 3px rgba(107,47,224,0.12); }
+textarea.txt-input { resize:vertical; min-height:58px; font-family:'SF Mono','Fira Code',monospace; font-size:12px; }
+.sec-lbl { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--gray-500); margin:16px 0 8px; display:flex; justify-content:space-between; align-items:center; }
+.opt-row { display:flex; align-items:flex-start; gap:8px; font-size:12.5px; color:var(--gray-700); margin-bottom:8px; cursor:pointer; line-height:1.4; }
+.opt-row input { width:15px; height:15px; accent-color:var(--purple); margin-top:1px; flex-shrink:0; }
+.opt-row small { color:var(--gray-500); display:block; }
+.run-log { background:var(--gray-900); color:#D0D5DD; font-family:'SF Mono','Fira Code',monospace; font-size:11.5px; line-height:1.55; border-radius:8px; padding:12px; height:220px; overflow-y:auto; white-space:pre-wrap; }
+.run-prog { height:6px; background:var(--gray-200); border-radius:3px; overflow:hidden; margin:10px 0 12px; }
+.run-prog div { height:100%; background:var(--purple); transition:width .3s; }
+
 /* ── Toast ── */
 .toast {
   position: fixed; bottom: 24px; right: 24px; z-index: 300;
@@ -285,9 +318,9 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
     <div class="nav-item" onclick="loadReport()">
       <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" stroke-dasharray="4"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>Latest Report
     </div>
-    <div class="nav-label">Schedule</div>
-    <div class="nav-item">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Daily 07:00 IST
+    <div class="nav-label">Run</div>
+    <div class="nav-item" onclick="openRunModal()">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Clients &amp; Runs
     </div>
   </nav>
   <div class="sidebar-footer">WealthScape API Sanity Agent</div>
@@ -298,7 +331,7 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
     <div class="topbar-title">API Sanity Dashboard</div>
     <div class="topbar-right">
       <div class="last-updated" id="last-updated">Loading...</div>
-      <div class="next-run-badge"><span class="dot"></span>Next run: <strong id="countdown">--:--:--</strong></div>
+      <div class="runner-badge" id="runner-badge" title="Local runner status"><span class="dot"></span><span id="runner-badge-txt">Runner offline</span></div>
       <button class="run-now-btn" id="run-now-btn" onclick="openRunModal()">
         <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         Run Tests Now
@@ -309,15 +342,15 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
 
   <!-- Run Now Modal -->
   <div class="modal-overlay" id="run-modal" onclick="handleOverlayClick(event)">
-    <div class="modal">
+    <div class="modal wide">
       <div class="modal-hdr">
         <div class="modal-hdr-left">
           <div class="modal-icon">
             <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           </div>
           <div>
-            <div class="modal-title">Trigger Sanity Run</div>
-            <div class="modal-sub">Manually dispatch the WealthScape daily sanity check</div>
+            <div class="modal-title">Run Checks</div>
+            <div class="modal-sub">Pick the clients and users to test. Every check runs from your own machine.</div>
           </div>
         </div>
         <button class="modal-close" onclick="closeRunModal()">
@@ -325,33 +358,59 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
         </button>
       </div>
       <div class="modal-body">
-        <div class="modal-info">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-          <p>Enter a GitHub Personal Access Token with <strong>Actions: write</strong> scope. With <strong>Remember</strong> on, it is saved only in this browser so you don't re-enter it &mdash; sent solely to GitHub's API, never committed to this site.<br>
-          <a href="https://github.com/settings/tokens/new?description=WealthScape+QA+Trigger&scopes=workflow" target="_blank">Generate a token &rarr;</a></p>
+        <!-- runner not reachable -->
+        <div id="runner-off" class="runner-off" style="display:none">
+          <strong>The local runner is not running.</strong> It is the small program on your computer that calls the WealthScape APIs (a web page cannot call them directly). Start it in a terminal:
+          <code>~/wealthscape-agent/run-local.sh</code>
+          It opens this dashboard at <strong>http://localhost:8765</strong>. No GitHub key or login is needed.
+          <div style="margin-top:10px"><button class="btn-cancel" onclick="refreshRunner(true)">Check again</button></div>
         </div>
-        <label class="field-lbl" for="pat-input">GitHub Personal Access Token</label>
-        <div class="field-wrap">
-          <input class="pat-input" id="pat-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
-          <button class="show-pat-btn" id="show-pat-btn" onclick="togglePatVisibility()" type="button">
-            <svg id="eye-icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
+
+        <!-- client manager -->
+        <div id="runner-on" style="display:none">
+          <div class="sec-lbl" style="margin-top:0"><span>Clients</span><button class="cl-btn" onclick="openClientForm()">+ Add client</button></div>
+          <div id="client-list"></div>
+
+          <div class="cl-form" id="client-form">
+            <input type="hidden" id="cf-id">
+            <div class="cl-grid">
+              <div><label class="field-lbl" for="cf-name">Client name</label><input class="txt-input" id="cf-name" placeholder="e.g. PNB" autocomplete="off"></div>
+              <div><label class="field-lbl" for="cf-env">Environment</label><select class="txt-input" id="cf-env"><option value="uat">UAT</option><option value="prod">PROD</option></select></div>
+              <div class="full"><label class="field-lbl" for="cf-url">Base URL</label><input class="txt-input" id="cf-url" placeholder="https://client.fiu.finfactor.in" autocomplete="off" spellcheck="false"></div>
+              <div><label class="field-lbl" for="cf-cid">Channel ID</label><input class="txt-input" id="cf-cid" placeholder="pfm@client" autocomplete="off" spellcheck="false"></div>
+              <div><label class="field-lbl" for="cf-sec">Channel secret</label><input class="txt-input" id="cf-sec" type="password" autocomplete="new-password"></div>
+              <div class="full"><label class="field-lbl" for="cf-tok">Or paste a channel token <span style="font-weight:400;color:var(--gray-500)">(optional, used instead of ID and secret; expires in about a day)</span></label><input class="txt-input" id="cf-tok" type="password" autocomplete="off" spellcheck="false"></div>
+              <div class="full"><label class="field-lbl" for="cf-uids">Users to test (uniqueIdentifiers)</label><textarea class="txt-input" id="cf-uids" placeholder="One per line or comma-separated, e.g. 9876543210" spellcheck="false"></textarea>
+                <div class="field-hint">Each user is tested separately and gets its own result card.</div></div>
+            </div>
+            <div class="field-err" id="cf-error"></div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+              <button class="btn-cancel" onclick="closeClientForm()">Cancel</button>
+              <button class="btn-trigger" onclick="saveClient()">Save client</button>
+            </div>
+            <div class="field-hint" style="margin-top:8px">Saved on this computer only (~/.wealthscape-qa/clients.json). Secrets are never shown again or sent anywhere except the client's own API.</div>
+          </div>
+
+          <div id="run-options">
+            <div class="sec-lbl">Options</div>
+            <label class="opt-row"><input type="checkbox" id="opt-negative" checked><span>Include negative tests<small>Sends about 140 deliberately invalid requests per user (bad tokens, malformed input). Consider leaving this off for PROD.</small></span></label>
+            <label class="opt-row"><input type="checkbox" id="opt-networth" checked><span>Include net worth<small>Turn off for users with a credit subscription: the call can trigger a live credit-bureau pull.</small></span></label>
+          </div>
+          <div class="field-err" id="run-error"></div>
         </div>
-        <div class="field-hint">Sent directly to GitHub's API from your browser. Nothing is logged or committed to this site.</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;gap:10px;">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-700);cursor:pointer;user-select:none;">
-            <input type="checkbox" id="remember-pat" checked style="width:15px;height:15px;accent-color:var(--purple);cursor:pointer;">
-            Remember on this device
-          </label>
-          <button type="button" id="forget-pat-btn" onclick="forgetPat()" style="display:none;background:none;border:none;color:var(--purple);font-size:12px;font-weight:600;cursor:pointer;padding:4px;">Forget saved token</button>
+
+        <!-- run in progress -->
+        <div id="runner-progress" style="display:none">
+          <div style="font-size:13px;font-weight:600;color:var(--gray-900)" id="run-status">Starting…</div>
+          <div class="run-prog"><div id="run-bar" style="width:0%"></div></div>
+          <div class="run-log" id="run-log"></div>
         </div>
-        <div class="field-err" id="pat-error"></div>
       </div>
-      <div class="modal-footer">
-        <button class="btn-cancel" onclick="closeRunModal()">Cancel</button>
-        <button class="btn-trigger" id="trigger-btn" onclick="triggerWorkflow()">
+      <div class="modal-footer" id="run-footer">
+        <button class="btn-cancel" onclick="closeRunModal()">Close</button>
+        <button class="btn-trigger" id="trigger-btn" onclick="startRun()">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Trigger Run
+          Run selected
         </button>
       </div>
     </div>
@@ -452,7 +511,7 @@ function explainFailure(check) {
     return { what:`Transaction amount does not match units × NAV.`, exact:D.pv, why:`Stamp duty or tax may be included in the amount field, or a data error in units/NAV.`, impact:`Transaction amount accuracy cannot be verified.`, action:`Check if charges are embedded in the amount. Review the calculation tolerance in the config.` };
 
   if (desc.includes('Insights API returns valid structure'))
-    return { what:`The Insights API response is missing the overallSummary or holdings blocks.`, exact:D.exact, why:`The aggregation service may have failed for this user, or a breaking schema change was deployed.`, impact:`Portfolio summary screen will be blank or show partial data.`, action:`Check the insights aggregation service logs for user 9819582869. Compare the live response schema against the API spec.` };
+    return { what:`The Insights API response is missing the overallSummary or holdings blocks.`, exact:D.exact, why:`The aggregation service may have failed for this user, or a breaking schema change was deployed.`, impact:`Portfolio summary screen will be blank or show partial data.`, action:`Check the insights aggregation service logs for this user. Compare the live response schema against the API spec.` };
 
   if (desc.includes('holdings[] count') || desc.includes('holdings list count'))
     return { what:`The holdings[] array length doesn't match the totalHoldings field.`, exact:D.pv, why:`totalHoldings is a pre-computed count field that may be out of sync with the actual holdings list.`, impact:`Holding count mismatch causes confusion in the UI.`, action:`Verify the totalHoldings field is computed from the same query that populates the holdings[] array.` };
@@ -514,6 +573,43 @@ function explainFailure(check) {
   if (desc.includes('Unknown identifier') || desc.includes('no data leak'))
     return { what:`A random uniqueIdentifier returned unexpected data or a 500 error.`, exact:D.exact, why:`The API is not handling non-existent user lookups gracefully.`, impact:`Could expose internal error details or stack traces to clients.`, action:`Return an empty result or 404 for non-existent identifiers. Never return 500 on user-controlled input errors.` };
 
+  // ── Other asset classes (phases 8+): explain by check family ──
+  const id = check.check_id || '';
+  if (id === 'AGENT-ERR')
+    return { what:`The agent itself hit an error while running this phase, so its checks did not run.`, exact:D.exact, why:`The API returned a response shape the check did not expect.`, impact:`No coverage for this phase in this run.`, action:`Share the error text above with whoever maintains the agent so the check can be adjusted.` };
+  if (id === 'BR-AUTH-00')
+    return { what:`The agent could not log in to this client, so no checks were run.`, exact:D.exact, why:`The base URL is wrong or unreachable, or the channel ID, secret or pasted token is not valid for this environment.`, impact:`Nothing was tested for this user.`, action:`Open Run Tests Now, edit the client and correct the base URL and credentials, then run again.` };
+  if (id.startsWith('BR-AUTH'))
+    return { what:`A request with a bad or missing token was not rejected with 401.`, exact:D.exact, why:`Authentication is not enforced on this route, or the gateway answers with a different status.`, impact:`🚨 If the request was served, data is reachable without a valid login.`, action:`Confirm the route sits behind the JWT filter and returns 401 for invalid and missing tokens.` };
+  if (/^BR-GEN-(07|09|11)/.test(id) || desc.includes('blank uniqueIdentifier') || desc.includes('37-character'))
+    return { what:`A missing, blank or over-long user identifier was not cleanly rejected.`, exact:D.exact, why:`The request is not validated before processing; a 5xx means the server crashed on it.`, impact:`Malformed requests reach the service layer; a 200 with zeros hides integration mistakes from the caller.`, action:`Validate uniqueIdentifier up front and return 400 for missing, blank or over-long values.` };
+  if (id.startsWith('BR-FMT'))
+    return { what:`A malformed request (bad JSON, wrong HTTP method or wrong content type) was not answered with the right 4xx.`, exact:D.exact, why:`The error handler has no mapping for this case, so it falls through to a generic 500 or is accepted.`, impact:`Client mistakes show up as server errors, which pollutes 5xx monitoring and confuses integrators.`, action:`Map malformed body to 400, unsupported method to 405 and unsupported media type to 415 in the exception handler.` };
+  if (id.startsWith('BR-DATE'))
+    return { what:`An invalid date range or sort order was not handled correctly.`, exact:D.exact, why:`Date or enum validation is missing on this statement route.`, impact:`Users can get confusing empty or wrong statements; a 5xx means bad input crashes the call.`, action:`Reject inverted ranges, bad date formats and unknown txnOrder values with 400; return an empty list for future-only ranges.` };
+  if (id.startsWith('BR-ACC'))
+    return { what:`A request for an account or ISIN that does not belong to this user was not safely rejected.`, exact:D.exact, why:`Account ownership or mandatory-filter validation is missing on this route.`, impact:`🚨 If rows came back, one user's request can read another account's data.`, action:`Look the account up by (user, accountId) and return a 4xx when it is not the user's; enforce mandatory filters.` };
+  if (id === 'BR-DEP-30')
+    return { what:`The bank-account insights API did not reject an invalid request.`, exact:D.exact, why:`A missing or invalid from-date, to-date or frequency is not validated; a 5xx means it crashed on the missing value.`, impact:`The cash-flow screen can fail with a server error instead of a clear message.`, action:`Validate from, to and frequency before use and return 400 with a clear message.` };
+  if (id.startsWith('BR-FLT') || id.startsWith('BR-PAG'))
+    return { what:`An invalid filter or paging value was not handled correctly.`, exact:D.exact, why:`The filter value or page size is not validated or bounded.`, impact:`Bad filter values can crash the call; an unbounded page size allows very large responses.`, action:`Reject unknown filter values with 400 and cap the page size.` };
+  if (desc.includes('API reachable'))
+    return { what:`The API did not return HTTP 200 or its documented empty response.`, exact:D.exact, why:`The service is down, the token was rejected, or the call failed for this user's data.`, impact:`This asset class cannot be shown to the user, and the remaining checks for it were skipped.`, action:`Call the endpoint for this user and check the service logs for the error.` };
+  if (desc.includes('fresh (within'))
+    return { what:`Data for this asset class has not been refreshed recently.`, exact:D.exact, why:`The last Account Aggregator fetch for these accounts is old, or the consent has lapsed.`, impact:`Values shown to the user are out of date.`, action:`Check the consent status and the scheduled data-fetch for these accounts.` };
+  if (id.startsWith('BR-NW'))
+    return { what:`The net-worth response does not add up, or disagrees with the asset-class API it is built from.`, exact:D.pv, why:`A component failed silently and was left out, or the two APIs read different snapshots or apply different dedupe rules.`, impact:`The headline net-worth number and its breakdown do not match the detail screens.`, action:`Compare the component named above with its own API for this user and check the net-worth service logs for a swallowed error.` };
+  if (id.startsWith('BR-GLA') || id.startsWith('BR-CON'))
+    return { what:`The linked-accounts or consents response is internally inconsistent.`, exact:D.pv, why:`Summary counts are computed separately from the account list, or a field that should be removed is still populated.`, impact:`Account counts and totals on the landing page are wrong, or personal data is exposed where it should not be.`, action:`Recompute the summary from the same account list and review the no-PII field list.` };
+  if (/^BR-(EQ|ETF|SEC)/.test(id))
+    return { what:`Equity / ETF data failed a consistency check.`, exact:D.pv, why:`Totals are rolled up from a different set of holdings than the list returned, or a holding's value was not recomputed after its price or units changed.`, impact:`Stock and ETF values shown to the user do not add up across screens.`, action:`Recompute the holding and totals for this user from units and price, and compare the views named above.` };
+  if (/^BR-(DEP|TD|RD)/.test(id))
+    return { what:`Bank account or deposit data failed a consistency check.`, exact:D.pv, why:`Totals are not the sum of the accounts returned, statement data is incomplete or out of order, or the bank sent an implausible value.`, impact:`Balances, statements or cash-flow insights shown to the user are unreliable.`, action:`Check the accounts and transactions named above against the raw Account Aggregator data.` };
+  if (id.startsWith('BR-NPS'))
+    return { what:`NPS data failed a consistency check.`, exact:D.pv, why:`Tier and scheme values come from different fields of the source data, or daily returns are computed at the wrong level.`, impact:`NPS value, allocation or daily change shown to the user is wrong.`, action:`Recompute scheme value as NAV × units and compare tier totals for this user.` };
+  if (/^BR-(REIT|INVIT|AIF|CIS|LI|GI)/.test(id))
+    return { what:`This asset class's totals do not match its account list.`, exact:D.pv, why:`The summary is not computed from the accounts returned.`, impact:`The value shown for this asset class is wrong.`, action:`Recompute the total from the linked accounts for this user.` };
+
   // fallback
   return { what:`Check "${desc}" failed validation.`, exact:D.exact, why:`The API response did not meet the expected criteria.`, impact:`Data quality for this metric is compromised.`, action:`Review the observed value above and compare against the check definition.` };
 }
@@ -544,7 +640,7 @@ h2. Suggested action
 ${exp.action}
 
 ----
-Detected by WealthScape API Sanity Agent (daily 07:00 IST)
+Detected by WealthScape API Sanity Agent
 Dashboard: https://github.com/adityasingh42069/wealthscape-qa-dashboard`;
   return { summary, description, sev };
 }
@@ -715,67 +811,214 @@ function toggleChecks(id,row){
   row.querySelector('.chevron')?.classList.toggle('open');
 }
 
-function updateCountdown(){
-  const ist=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-  const next=new Date(ist); next.setHours(7,0,0,0);
-  if(ist>=next) next.setDate(next.getDate()+1);
-  const d=next-ist,h=Math.floor(d/3600000),m=Math.floor((d%3600000)/60000),s=Math.floor((d%60000)/1000);
-  document.getElementById('countdown').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+// ── Local runner ───────────────────────────────────────────────
+// The checks run in a small program on this computer (run-local.sh in the agent repo).
+// When this page is served by that program the API is same-origin; from the hosted page
+// it is reached on localhost.
+const IS_LOCAL = ['localhost','127.0.0.1'].includes(location.hostname);
+const RUNNER = IS_LOCAL ? '' : 'http://localhost:8765';
+let _runnerUp = false, _clients = [], _selected = new Set(), _poll = null;
+try { localStorage.removeItem('ws_pat'); } catch (_) {}
+
+async function rfetch(path, opts = {}) {
+  const o = Object.assign({ cache: 'no-store' }, opts);
+  if (o.body) { o.headers = { 'Content-Type': 'application/json' }; o.body = JSON.stringify(o.body); }
+  const r = await fetch(RUNNER + path, o);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Runner returned ${r.status}`);
+  return data;
 }
-setInterval(updateCountdown,1000); updateCountdown();
+
+async function refreshRunner(showResult) {
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 2500);
+    const h = await rfetch('/api/health', { signal: ctl.signal }); clearTimeout(t);
+    _runnerUp = !!h.ok;
+  } catch (_) { _runnerUp = false; }
+  const badge = document.getElementById('runner-badge');
+  badge.classList.toggle('on', _runnerUp);
+  document.getElementById('runner-badge-txt').textContent = _runnerUp ? 'Runner connected' : 'Runner offline';
+  if (document.getElementById('run-modal').classList.contains('open') && !_poll) renderRunModal();
+  if (showResult && !_runnerUp) showToast('Runner still not reachable on localhost:8765', 'error');
+  return _runnerUp;
+}
+
+function emptyState(msg) {
+  return `<div class="err-card"><div style="font-size:32px;margin-bottom:12px">📋</div><div style="font-size:16px;font-weight:600;margin-bottom:6px">No results yet</div><div style="font-size:13px;color:var(--gray-500);line-height:1.6">Click <strong>Run Tests Now</strong>, add a client with the users you want to test, and run the checks.${msg ? `<br><small style="color:var(--gray-400)">${esc(msg)}</small>` : ''}</div></div>`;
+}
+
+function showReport(data) {
+  if (!data || !(data.clients || []).length) {
+    document.getElementById('main-content').innerHTML = emptyState((data && data.errors || []).join(' · '));
+    document.getElementById('last-updated').textContent = 'No runs yet';
+    return;
+  }
+  document.getElementById('main-content').innerHTML = renderDashboard(data);
+}
 
 async function loadReport(){
+  await refreshRunner();
   try {
-    const r=await fetch('reports/latest_report.json?t='+Date.now());
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
-    document.getElementById('main-content').innerHTML=renderDashboard(await r.json());
+    if (_runnerUp) {
+      const local = await rfetch('/api/report/latest');
+      if ((local.clients || []).length) return showReport(local);
+    }
+    const r = await fetch('reports/latest_report.json?t=' + Date.now());
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    showReport(await r.json());
   } catch(e) {
-    document.getElementById('main-content').innerHTML=`<div class="err-card"><div style="font-size:32px;margin-bottom:12px">📋</div><div style="font-size:16px;font-weight:600;margin-bottom:6px">No report data yet</div><div style="font-size:13px;color:var(--gray-500)">The agent runs daily at 07:00 IST.<br><small style="color:var(--gray-400)">${e.message}</small></div></div>`;
+    document.getElementById('main-content').innerHTML = emptyState(e.message);
   }
 }
 
-// ── Run Now Modal ──────────────────────────────────────────────
-const AGENT_REPO = 'adityasingh42069/wealthscape-agent';
-const WORKFLOW_ID = 'daily-sanity-check.yml';
-
+// ── Run modal: clients, options, progress ──────────────────────
 function openRunModal() {
   document.getElementById('run-modal').classList.add('open');
-  let saved = '';
-  try { saved = localStorage.getItem('ws_pat') || ''; } catch (_) {}
-  document.getElementById('pat-input').value = saved;
-  document.getElementById('remember-pat').checked = true;
-  document.getElementById('forget-pat-btn').style.display = saved ? 'block' : 'none';
-  document.getElementById('pat-error').style.display = 'none';
-  document.getElementById('pat-error').textContent = '';
-  document.getElementById('pat-input').classList.remove('err');
-  setTimeout(() => document.getElementById('pat-input').focus(), 80);
+  renderRunModal();
+  refreshRunner();
+}
+function closeRunModal() { document.getElementById('run-modal').classList.remove('open'); }
+function handleOverlayClick(e) { if (e.target === document.getElementById('run-modal')) closeRunModal(); }
+
+async function renderRunModal() {
+  const running = !!_poll;
+  document.getElementById('runner-off').style.display = (!_runnerUp && !running) ? 'block' : 'none';
+  document.getElementById('runner-on').style.display = (_runnerUp && !running) ? 'block' : 'none';
+  document.getElementById('runner-progress').style.display = running ? 'block' : 'none';
+  document.getElementById('trigger-btn').style.display = (_runnerUp && !running) ? 'flex' : 'none';
+  if (_runnerUp && !running) await loadClients();
 }
 
-function forgetPat() {
-  try { localStorage.removeItem('ws_pat'); } catch (_) {}
-  document.getElementById('pat-input').value = '';
-  document.getElementById('remember-pat').checked = false;
-  document.getElementById('forget-pat-btn').style.display = 'none';
-  document.getElementById('pat-input').focus();
-}
-
-function closeRunModal() {
-  document.getElementById('run-modal').classList.remove('open');
-}
-
-function handleOverlayClick(e) {
-  if (e.target === document.getElementById('run-modal')) closeRunModal();
-}
-
-function togglePatVisibility() {
-  const inp = document.getElementById('pat-input');
-  const eye = document.getElementById('eye-icon');
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    eye.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+async function loadClients() {
+  try { _clients = (await rfetch('/api/clients')).clients || []; } catch (e) { _clients = []; }
+  const known = new Set(_clients.map(c => c.id));
+  _selected = new Set([..._selected].filter(id => known.has(id)));
+  const el = document.getElementById('client-list');
+  if (!_clients.length) {
+    el.innerHTML = '<div class="cl-empty">No clients yet. Add one to start testing.</div>';
+    if (!document.getElementById('client-form').classList.contains('open')) openClientForm();
   } else {
-    inp.type = 'password';
-    eye.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    el.innerHTML = _clients.map(c => {
+      let host = c.baseUrl; try { host = new URL(c.baseUrl).host; } catch (_) {}
+      const n = c.uids.length;
+      return `<div class="cl-row">
+        <input type="checkbox" ${_selected.has(c.id) ? 'checked' : ''} onchange="toggleClient('${c.id}', this.checked)">
+        <div class="cl-main">
+          <div class="cl-name">${esc(c.name)}<span class="env-badge ${c.environment.toUpperCase()}">${c.environment.toUpperCase()}</span></div>
+          <div class="cl-meta">${esc(host)} · ${n} user${n !== 1 ? 's' : ''} · ${c.hasToken ? 'token' : esc(c.channelId)}</div>
+        </div>
+        <button class="cl-btn" onclick="openClientForm('${c.id}')">Edit</button>
+        <button class="cl-btn del" onclick="deleteClient('${c.id}')">Remove</button>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('run-options').style.display = _clients.length ? 'block' : 'none';
+  updateRunButton();
+}
+
+function toggleClient(id, on) {
+  if (on) _selected.add(id); else _selected.delete(id);
+  const sel = _clients.filter(c => _selected.has(c.id));
+  // Bad-input tests default off as soon as a PROD client is in the selection
+  if (on && sel.some(c => c.environment === 'prod')) document.getElementById('opt-negative').checked = false;
+  updateRunButton();
+}
+function updateRunButton() {
+  const users = _clients.filter(c => _selected.has(c.id)).reduce((n, c) => n + c.uids.length, 0);
+  const btn = document.getElementById('trigger-btn');
+  btn.disabled = users === 0;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>' + (users ? `Run checks for ${users} user${users !== 1 ? 's' : ''}` : 'Select a client');
+}
+
+function openClientForm(id) {
+  const c = _clients.find(x => x.id === id) || {};
+  document.getElementById('cf-id').value = c.id || '';
+  document.getElementById('cf-name').value = c.name || '';
+  document.getElementById('cf-env').value = c.environment || 'uat';
+  document.getElementById('cf-url').value = c.baseUrl || '';
+  document.getElementById('cf-cid').value = c.channelId || '';
+  document.getElementById('cf-sec').value = '';
+  document.getElementById('cf-sec').placeholder = c.hasSecret ? 'Saved — leave blank to keep' : '';
+  document.getElementById('cf-tok').value = '';
+  document.getElementById('cf-tok').placeholder = c.hasToken ? 'Saved — leave blank to keep' : '';
+  document.getElementById('cf-uids').value = (c.uids || []).join('\n');
+  document.getElementById('cf-error').style.display = 'none';
+  document.getElementById('client-form').classList.add('open');
+  setTimeout(() => document.getElementById('cf-name').focus(), 60);
+}
+function closeClientForm() { document.getElementById('client-form').classList.remove('open'); }
+
+async function saveClient() {
+  const err = document.getElementById('cf-error');
+  err.style.display = 'none';
+  const body = {
+    id: document.getElementById('cf-id').value || undefined,
+    name: document.getElementById('cf-name').value,
+    environment: document.getElementById('cf-env').value,
+    baseUrl: document.getElementById('cf-url').value,
+    channelId: document.getElementById('cf-cid').value,
+    uids: document.getElementById('cf-uids').value,
+  };
+  const sec = document.getElementById('cf-sec').value, tok = document.getElementById('cf-tok').value.trim();
+  if (sec) body.channelSecret = sec;
+  if (tok) body.channelToken = tok;
+  try {
+    const saved = (await rfetch('/api/clients', { method: 'POST', body })).client;
+    _selected.add(saved.id);
+    closeClientForm();
+    await loadClients();
+    showToast(`Saved ${saved.name}`, 'success');
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+async function deleteClient(id) {
+  const c = _clients.find(x => x.id === id);
+  if (!c) return;
+  const btn = event.target;
+  if (btn.dataset.armed !== '1') { btn.dataset.armed = '1'; btn.textContent = 'Confirm remove'; setTimeout(() => { btn.dataset.armed = ''; btn.textContent = 'Remove'; }, 3000); return; }
+  try { await rfetch('/api/clients/' + id, { method: 'DELETE' }); _selected.delete(id); await loadClients(); }
+  catch (e) { showToast(e.message, 'error'); }
+}
+
+async function startRun() {
+  const err = document.getElementById('run-error');
+  err.style.display = 'none';
+  try {
+    const { jobId } = await rfetch('/api/run', { method: 'POST', body: {
+      clientIds: [..._selected],
+      negative: document.getElementById('opt-negative').checked,
+      netWorth: document.getElementById('opt-networth').checked,
+    }});
+    document.getElementById('run-log').textContent = '';
+    document.getElementById('run-bar').style.width = '2%';
+    document.getElementById('run-status').textContent = 'Starting…';
+    const runBtn = document.getElementById('run-now-btn');
+    runBtn.disabled = true; runBtn.innerHTML = '<span class="spinner-sm"></span> Running…';
+    _poll = setInterval(() => pollRun(jobId), 1500);
+    renderRunModal();
+  } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+}
+
+async function pollRun(jobId) {
+  let job;
+  try { job = await rfetch('/api/run/' + jobId); } catch (e) { job = { state: 'error', error: 'Lost contact with the runner: ' + e.message, log: [] }; }
+  const log = document.getElementById('run-log');
+  log.textContent = (job.log || []).join('\n'); log.scrollTop = log.scrollHeight;
+  if (job.total) {
+    document.getElementById('run-bar').style.width = Math.max(2, Math.round(job.done / job.total * 100)) + '%';
+    document.getElementById('run-status').textContent = job.current ? `Testing ${job.current} (${Math.min(job.done + 1, job.total)} of ${job.total})` : 'Finishing…';
+  }
+  if (job.state === 'running') return;
+  clearInterval(_poll); _poll = null;
+  const runBtn = document.getElementById('run-now-btn');
+  runBtn.disabled = false; runBtn.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Run Tests Now';
+  if (job.state === 'done' && job.report) {
+    showReport(job.report); closeRunModal(); renderRunModal();
+    showToast(`Run complete: ${job.report.passed} passed, ${job.report.warnings} warnings, ${job.report.failed} failed`, job.report.failed ? 'error' : 'success');
+  } else {
+    document.getElementById('run-status').textContent = 'Run failed: ' + (job.error || 'unknown error');
+    showToast('Run failed', 'error');
+    setTimeout(renderRunModal, 4000);
   }
 }
 
@@ -791,81 +1034,10 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.classList.remove('show'), 4500);
 }
 
-async function triggerWorkflow() {
-  const pat = document.getElementById('pat-input').value.trim();
-  const errEl = document.getElementById('pat-error');
-  const btn = document.getElementById('trigger-btn');
-
-  errEl.style.display = 'none';
-  errEl.textContent = '';
-  document.getElementById('pat-input').classList.remove('err');
-
-  if (!pat) {
-    errEl.textContent = 'Please enter your GitHub Personal Access Token.';
-    errEl.style.display = 'block';
-    document.getElementById('pat-input').classList.add('err');
-    document.getElementById('pat-input').focus();
-    return;
-  }
-
-  // Disable button, show spinner
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-sm"></span> Triggering…';
-
-  try {
-    const res = await fetch(
-      `https://api.github.com/repos/${AGENT_REPO}/actions/workflows/${WORKFLOW_ID}/dispatches`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${pat}`,
-          'Accept': 'application/vnd.github+json',
-          'Content-Type': 'application/json',
-          'X-GitHub-Api-Version': '2022-11-28'
-        },
-        body: JSON.stringify({ ref: 'main' })
-      }
-    );
-
-    if (res.status === 204) {
-      try {
-        if (document.getElementById('remember-pat').checked) localStorage.setItem('ws_pat', pat);
-        else localStorage.removeItem('ws_pat');
-      } catch (_) {}
-      closeRunModal();
-      // Update the Run Now button to show queued state
-      const runBtn = document.getElementById('run-now-btn');
-      runBtn.disabled = true;
-      runBtn.innerHTML = '<span class="spinner-sm"></span> Run queued…';
-      setTimeout(() => {
-        runBtn.disabled = false;
-        runBtn.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Run Tests Now';
-      }, 30000);
-      showToast('✓ Sanity run triggered — check GitHub Actions for progress', 'success');
-    } else if (res.status === 401) {
-      throw new Error('Token is invalid or expired.');
-    } else if (res.status === 403) {
-      throw new Error('Token lacks Actions write permission. Enable the "workflow" scope.');
-    } else if (res.status === 404) {
-      throw new Error('Workflow not found. The agent repo or workflow ID may have changed.');
-    } else {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || `GitHub API returned ${res.status}`);
-    }
-  } catch (err) {
-    errEl.textContent = err.message || 'Failed to trigger workflow. Check your token and try again.';
-    errEl.style.display = 'block';
-    document.getElementById('pat-input').classList.add('err');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>Trigger Run';
-  }
-}
-
 // Close modal on Escape
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRunModal(); });
 
-loadReport(); setInterval(loadReport, 5 * 60 * 1000);
+loadReport(); setInterval(refreshRunner, 15000);
 </script>
 </body>
 </html>
