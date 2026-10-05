@@ -290,7 +290,7 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Daily 07:00 IST
     </div>
   </nav>
-  <div class="sidebar-footer">WealthScape MF Sanity Agent</div>
+  <div class="sidebar-footer">WealthScape API Sanity Agent</div>
 </aside>
 
 <div class="main">
@@ -544,8 +544,8 @@ h2. Suggested action
 ${exp.action}
 
 ----
-Detected by WealthScape MF API Sanity Agent (daily 07:00 IST)
-Dashboard: https://singhaditya210100-dev.github.io/wealthscape-qa-dashboard`;
+Detected by WealthScape API Sanity Agent (daily 07:00 IST)
+Dashboard: https://github.com/adityasingh42069/wealthscape-qa-dashboard`;
   return { summary, description, sev };
 }
 
@@ -735,8 +735,8 @@ async function loadReport(){
 }
 
 // ── Run Now Modal ──────────────────────────────────────────────
-const AGENT_REPO = 'singhaditya210100-dev/wealthscape-agent';
-const WORKFLOW_ID = '255722908';
+const AGENT_REPO = 'adityasingh42069/wealthscape-agent';
+const WORKFLOW_ID = 'daily-sanity-check.yml';
 
 function openRunModal() {
   document.getElementById('run-modal').classList.add('open');
