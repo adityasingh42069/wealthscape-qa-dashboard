@@ -308,6 +308,8 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
 .grp .detail-panel, .grp .ticket-panel { margin-left:44px; }
 .tag { display:inline-block; font-size:10px; font-weight:600; color:var(--gray-500); background:var(--gray-100); border-radius:4px; padding:1px 6px; margin-left:6px; }
 .tag.neg { color:#93370D; background:var(--amber-light); }
+.tag.rel { color:var(--purple-dark); background:var(--purple-light); }
+.tool-btn.on { border-color:var(--purple); background:var(--purple-light); color:var(--purple-dark); }
 .none-card { background:var(--white); border:1px dashed var(--gray-300); border-radius:10px; padding:28px; text-align:center; font-size:13px; color:var(--gray-500); }
 
 /* ── Local runner / client manager ── */
@@ -448,6 +450,7 @@ textarea.txt-input { resize:vertical; min-height:58px; font-family:'SF Mono','Fi
           <div id="run-options">
             <div class="sec-lbl">Options</div>
             <label class="opt-row"><input type="checkbox" id="opt-negative" checked><span>Include negative tests<small>Sends about 140 deliberately invalid requests per user (bad tokens, malformed input). Consider leaving this off for PROD.</small></span></label>
+            <label class="opt-row"><input type="checkbox" id="opt-release" checked><span>Include checks for the upcoming release<small>MF subType, recurring transactions, Prism tasks, F&amp;O, dedupe, identifier resolver and the insights console. Features not deployed yet show as “not run”.</small></span></label>
             <label class="opt-row"><input type="checkbox" id="opt-networth" checked><span>Include net worth<small>Turn off for users with a credit subscription: the call can trigger a live credit-bureau pull.</small></span></label>
           </div>
           <div class="field-err" id="run-error"></div>
@@ -509,6 +512,137 @@ function formatExact(exact) {
 function esc2(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ── Description-based failure explainer with exact data values ──
+
+// ── Explanations for asset-class (phases 8-15) and next-release (16+) checks ──
+// Runs before the MF rules, which match on description text and would otherwise catch these.
+function explainExtended(check, D) {
+  const id = check.check_id || '', desc = check.description || '';
+  const is5xx = /got 5\d\d|Status: 5\d\d|HTTP 5\d\d/.test(D.exact);
+  const E = (what, why, impact, action, exact) => ({ what, exact: exact || D.exact, why, impact, action });
+
+  // ---- next release: security probes
+  if (id === 'BR-FNO-SEC-01')
+    return E(`The F&O raw-data API returned account data for a uniqueIdentifier that does not own the consent.`,
+      `It looks the record up by consentId and accountId only and never compares it with the requesting user.`,
+      `🚨 Anyone with a valid token plus a consent id and account id can read that customer's raw bank, demat or MF data.`,
+      `Check ownership in the lookup (consentId, accountId and uniqueIdentifier together) and return 404 when the consent is not the user's.`);
+  if (id === 'BR-PIC-SEC-01')
+    return E(`The insights console answered an end-user (app) token.`,
+      `The console only carries @CapabilitiesRequired, which lets user-role tokens through, and has no channel or admin-only check.`,
+      `🚨 An app user could read every customer's id and financial metrics for the whole tenant.`,
+      `Restrict /pfm-insights/* to channel or admin roles (for example @PreAuthorize hasAuthorityOfChannel).`);
+  // ---- next release: negative tests with a known cause
+  const KNOWN = {
+    'BR-FNO-NEG-01': [`/fno/result never validates uniqueIdentifier, so a missing one reaches findById(null) and the database error comes back as a 500.`, `Validate uniqueIdentifier (missing, blank, over 36 characters) like the other APIs and return 400.`],
+    'BR-DDP-NEG-05': [`The dedupe service throws a plain ResponseStatusException(404); the global exception handler does not recognise it and turns it into a 500.`, `Handle ResponseStatusException in PfmRestExceptionHandler (keep its status), or throw PfmNotFoundException instead.`],
+    'BR-PIC-NEG-05': [`A non-numeric page fails type conversion (MethodArgumentTypeMismatchException), which the exception handler maps to 500.`, `Map type-mismatch and missing-parameter exceptions to 400 in PfmRestExceptionHandler.`],
+    'BR-RCT-NEG-05': [`/recurring-txns/events only checks that uniqueIdentifier is not blank: there is no length check and no user lookup, so it answers 200 with an empty result.`, `Apply the same validation as the other APIs (at most 36 characters; unknown user → 406).`],
+  };
+  if (/-NEG-/.test(id))
+    return E(`An invalid request to a new release API was not handled as expected: ${desc}.`,
+      KNOWN[id] ? KNOWN[id][0] : is5xx ? `The input reaches the service unvalidated and the server fails on it; the generic exception handler then returns a 500.` : `Validation for this case is missing, or it answers with a different status than intended.`,
+      is5xx ? `Simple caller mistakes show up as server errors, which hides real outages in 5xx monitoring.` : `Integrators get a misleading answer for a bad request.`,
+      KNOWN[id] ? KNOWN[id][1] : `Validate this input before use and return the status shown in the check name.`);
+  // ---- next release: positive checks
+  if (/^BR-(MFST|RCT|PRISM|FNO|DDP|IDR|PIC)-/.test(id) && desc.endsWith('reachable'))
+    return E(`The new API did not answer with HTTP 200.`, `The service returned an error for this user, or the token was refused.`,
+      `This release feature cannot be checked (and would not work in the app) for this user.`, `Call the endpoint for this user and look for the error in the pfm-core logs.`);
+  if (id.startsWith('BR-MFST')) {
+    const M = {
+      '02': [`Some MF transactions have no subType, or one outside the documented set.`, `The registrar flag or AA narration is not covered by the mapping, or the rows came through the older AA-only path (only the merged MF Central + AA flow sets subType on every row).`, `The statement cannot show the transaction family (switch, IDCW, bonus, transfer…) for these rows.`, `Add the flags or narrations listed to MfcSubTypeMapper / AaSubTypeResolver.`],
+      '03': [`Rows carry an unexpected type or data source, or a negative amount.`, `The response mapping changed, or a row skipped normalisation.`, `The app may mislabel or hide these transactions.`, `Check how these rows are mapped in TxnResponseMutualFund.`],
+      '04': [`REVERSAL or unmatchedDemat appears on rows where it should not.`, `REVERSAL can only come from MF Central flags, and unmatchedDemat only from AA demat rows; anything else points to a mapping bug.`, `Reversed or unmatched transactions are flagged on the wrong rows.`, `Review the rows listed against the subType and dedupe mapping.`],
+      '05': [`AA rows were given a different subType than the narration rules produce.`, `The deployed resolver differs from the release code, or the narration or type it receives differs from what the API returns.`, `Switches, IDCW reinvestments or transfers appear under the wrong family.`, `Confirm the deployed pfm-common version and check the narrations listed.`],
+      '06': [`A purchase, switch-in or transfer-in row is not BUY, or a redemption, switch-out or transfer-out row is not SELL.`, `AA rows whose FIP type is OTHERS are reported as BUY (an open TODO in the AA normaliser); on MF Central rows the registrar flag and the amount sign disagree.`, `The row shows the wrong direction next to its family label.`, `Handle FIP type OTHERS explicitly in NormalizedMFTransaction and review the MF Central flags listed.`],
+    }[id.split('-')[2]];
+    if (M) return E(...M, D.pv);
+  }
+  if (id.startsWith('BR-RCT')) {
+    const M = {
+      '02': [`Recurring-transaction totals do not add up.`, `totalAmount is not the sum of the event totals, or an event total is not the sum of its transactions.`, `The recurring income / spend amounts shown to the user are wrong.`],
+      '03': [`Recurring transactions fall outside the requested dates, or empty accounts / events are returned.`, `The date filter or the empty-group pruning is not applied.`, `Users see transactions from outside the selected period, or empty cards.`],
+      '04': [`Recurring events or transactions are missing required fields.`, `The detection job stored incomplete rows.`, `These entries cannot be shown or linked back to the bank statement.`],
+      '05': [`Recurring transactions are shown for accounts that do not match the user's linked bank accounts.`, `An unlinked account still has active recurring events, or the FIP details differ from the linked-account record.`, `Users can see recurring items for accounts they no longer have linked.`],
+      '06': [`Some recurring transactions are not in the bank statement, or differ in amount or type.`, `The recurring tables were not refreshed after the statement changed, or the txnIds do not match.`, `Recurring items may not match what the user sees in their statement.`],
+      '07': [`The recurring history API misbehaves for an event listed by /events.`, `It returned an error, other accounts, an unknown occurrenceType, or rows out of date order.`, `The event history screen breaks or shows the wrong rows.`],
+      '08': [`History is missing recurring transactions that /events lists for the same event.`, `The two APIs pick different events (for example after re-identification) or apply different filters.`, `The history screen does not include transactions shown on the summary.`],
+      '09': [`Filtering /events by accountId returned other accounts too.`, `The accountId filter is not applied.`, `Per-account views show other accounts' recurring items.`],
+    }[id.split('-')[2]];
+    if (M) return E(...M, `Compare the entries listed with the recurring tables for this user.`, D.pv);
+  }
+  if (id.startsWith('BR-PRISM')) {
+    const M = {
+      '02': [`Prism task ids are missing or repeated, or a status is not recognised.`, `Logging rows were written twice or with an unexpected status.`],
+      '03': [`Prism tasks are not listed newest first.`, `The query's ordering is not applied.`],
+      '04': [`Some Prism categorisation tasks failed or have been pending for more than a day.`, `Prism did not answer, the callback was lost, or retries were exhausted.`],
+    }[id.split('-')[2]];
+    if (M) return E(...M, `Transactions behind these tasks may stay uncategorised in insights and statements.`, `Check the Prism logs for the task ids listed and re-trigger categorisation if needed.`, D.pv);
+  }
+  if (id.startsWith('BR-FNO')) {
+    if (id === 'BR-FNO-02')
+      return E(`The F&O result returned belongs to a different user.`, `The result lookup is not scoped to the requested uniqueIdentifier.`, `🚨 One customer's eligibility (and account details) can be shown to another.`, `Scope the lookup to the requesting user.`);
+    return E(`The F&O eligibility result is internally inconsistent.`, `The overall decision, the rule statuses and the per-account / user-level results disagree, or the evaluation date is invalid.`, `Users may be told they are eligible (or not) for F&O incorrectly.`, `Re-run the eligibility evaluation for this user and compare the rules listed.`, D.pv);
+  }
+  if (id.startsWith('BR-DDP')) {
+    if (id === 'BR-DDP-03')
+      return E(`Dedupe is marked complete, but the duplicate accounts are still linked (or the kept account is not).`, `The unlink step did not run or was reverted outside the dedupe flow.`, `The same account is counted twice in balances, holdings and net worth.`, `Inspect the group listed and reprocess it.`, D.pv);
+    if (id === 'BR-DDP-04')
+      return E(`The same account is linked more than once.`, `Dedupe has not run for this user yet (the release ships with its flags off), or the accounts were linked after it ran.`, `Account lists show duplicates, and totals built from them can double-count.`, `Once the dedupe flags are on, run dedupe for this user and check this again.`, D.pv);
+    return E(`The dedupe summary, group or run data is inconsistent.`, `Group details, statuses or counts disagree between the dedupe APIs.`, `Support cannot trust the dedupe state shown for this user.`, `Inspect the groups listed through the dedupe group API.`, D.pv);
+  }
+  if (id.startsWith('BR-IDR'))
+    return E(`The identifier resolver gave an inconsistent answer.`, `It resolved to a different user, its counts do not match its lists, or a returned id does not resolve back to the same user.`, `Support may look up the wrong customer from a consent or session id.`, `Check the consent-trace and MF Central session mappings for this user.`, D.pv);
+  if (id.startsWith('BR-PIC')) {
+    if (id === 'BR-PIC-02' && /days old/.test(desc))
+      return E(`The insights console report is older than 2 days.`, `The nightly persona job (which also builds the console) is off or failing.`, `The console shows stale tenant numbers.`, `Check pfm.cron.persona.report.enable and the job logs.`, D.pv);
+    return E(`The insights console numbers do not add up.`, `A derived figure (total, share, band count, segment) was computed from a different set of customers than the figure it is checked against.`, `Tenant-level insights shown to the business are wrong.`, `Regenerate the report and compare the figures listed; check the generation service logs for decrypt failures.`, D.pv);
+  }
+
+  // ---- asset classes (phases 8-15). MF phases 1-5 reuse a few negative-test ids, without a "Label:" prefix.
+  const asset = /^(AGENT-ERR$|BR-AUTH-00$|BR-(EQ|ETF|SEC|DEP|TD|RD|NPS|NW|GLA|CON|REIT|INVIT|AIF|CIS|LI|GI|FMT|DATE|ACC|FLT|PAG)-)/.test(id)
+    || (/^BR-(AUTH|GEN)-/.test(id) && desc.includes(':'));
+  if (!asset) return null;
+  if (id.startsWith('BR-GEN-08'))
+    return E(`A SQL-like identifier was not handled safely.`, `The value is not validated before the lookup; a 5xx means the server failed on it.`, `Possible injection surface, and error details may leak to the caller.`, `Validate identifiers before use and never return 500 for user input.`);
+  if (id.startsWith('BR-GEN-10'))
+    return E(`An unknown identifier returned data or a server error.`, `Non-existent users are not handled gracefully on this route.`, `Could expose data or internal error details.`, `Return 406/404 (or an empty result) for unknown users, never data or a 500.`);
+  if (id === 'AGENT-ERR')
+    return { what:`The agent itself hit an error while running this phase, so its checks did not run.`, exact:D.exact, why:`The API returned a response shape the check did not expect.`, impact:`No coverage for this phase in this run.`, action:`Share the error text above with whoever maintains the agent so the check can be adjusted.` };
+  if (id === 'BR-AUTH-00')
+    return { what:`The agent could not log in to this client, so no checks were run.`, exact:D.exact, why:`The base URL is wrong or unreachable, or the channel ID, secret or pasted token is not valid for this environment.`, impact:`Nothing was tested for this user.`, action:`Open Run Tests Now, edit the client and correct the base URL and credentials, then run again.` };
+  if (id.startsWith('BR-AUTH'))
+    return { what:`A request with a bad or missing token was not rejected with 401.`, exact:D.exact, why:`Authentication is not enforced on this route, or the gateway answers with a different status.`, impact:`🚨 If the request was served, data is reachable without a valid login.`, action:`Confirm the route sits behind the JWT filter and returns 401 for invalid and missing tokens.` };
+  if (/^BR-GEN-(07|09|11)/.test(id) || desc.includes('blank uniqueIdentifier') || desc.includes('37-character'))
+    return { what:`A missing, blank or over-long user identifier was not cleanly rejected.`, exact:D.exact, why:`The request is not validated before processing; a 5xx means the server crashed on it.`, impact:`Malformed requests reach the service layer; a 200 with zeros hides integration mistakes from the caller.`, action:`Validate uniqueIdentifier up front and return 400 for missing, blank or over-long values.` };
+  if (id.startsWith('BR-FMT'))
+    return { what:`A malformed request (bad JSON, wrong HTTP method or wrong content type) was not answered with the right 4xx.`, exact:D.exact, why:`The error handler has no mapping for this case, so it falls through to a generic 500 or is accepted.`, impact:`Client mistakes show up as server errors, which pollutes 5xx monitoring and confuses integrators.`, action:`Map malformed body to 400, unsupported method to 405 and unsupported media type to 415 in the exception handler.` };
+  if (id.startsWith('BR-DATE'))
+    return { what:`An invalid date range or sort order was not handled correctly.`, exact:D.exact, why:`Date or enum validation is missing on this statement route.`, impact:`Users can get confusing empty or wrong statements; a 5xx means bad input crashes the call.`, action:`Reject inverted ranges, bad date formats and unknown txnOrder values with 400; return an empty list for future-only ranges.` };
+  if (id.startsWith('BR-ACC'))
+    return { what:`A request for an account or ISIN that does not belong to this user was not safely rejected.`, exact:D.exact, why:`Account ownership or mandatory-filter validation is missing on this route.`, impact:`🚨 If rows came back, one user's request can read another account's data.`, action:`Look the account up by (user, accountId) and return a 4xx when it is not the user's; enforce mandatory filters.` };
+  if (id === 'BR-DEP-30')
+    return { what:`The bank-account insights API did not reject an invalid request.`, exact:D.exact, why:`A missing or invalid from-date, to-date or frequency is not validated; a 5xx means it crashed on the missing value.`, impact:`The cash-flow screen can fail with a server error instead of a clear message.`, action:`Validate from, to and frequency before use and return 400 with a clear message.` };
+  if (id.startsWith('BR-FLT') || id.startsWith('BR-PAG'))
+    return { what:`An invalid filter or paging value was not handled correctly.`, exact:D.exact, why:`The filter value or page size is not validated or bounded.`, impact:`Bad filter values can crash the call; an unbounded page size allows very large responses.`, action:`Reject unknown filter values with 400 and cap the page size.` };
+  if (desc.includes('API reachable'))
+    return { what:`The API did not return HTTP 200 or its documented empty response.`, exact:D.exact, why:`The service is down, the token was rejected, or the call failed for this user's data.`, impact:`This asset class cannot be shown to the user, and the remaining checks for it were skipped.`, action:`Call the endpoint for this user and check the service logs for the error.` };
+  if (desc.includes('fresh (within'))
+    return { what:`Data for this asset class has not been refreshed recently.`, exact:D.exact, why:`The last Account Aggregator fetch for these accounts is old, or the consent has lapsed.`, impact:`Values shown to the user are out of date.`, action:`Check the consent status and the scheduled data-fetch for these accounts.` };
+  if (id.startsWith('BR-NW'))
+    return { what:`The net-worth response does not add up, or disagrees with the asset-class API it is built from.`, exact:D.pv, why:`A component failed silently and was left out, or the two APIs read different snapshots or apply different dedupe rules.`, impact:`The headline net-worth number and its breakdown do not match the detail screens.`, action:`Compare the component named above with its own API for this user and check the net-worth service logs for a swallowed error.` };
+  if (id.startsWith('BR-GLA') || id.startsWith('BR-CON'))
+    return { what:`The linked-accounts or consents response is internally inconsistent.`, exact:D.pv, why:`Summary counts are computed separately from the account list, or a field that should be removed is still populated.`, impact:`Account counts and totals on the landing page are wrong, or personal data is exposed where it should not be.`, action:`Recompute the summary from the same account list and review the no-PII field list.` };
+  if (/^BR-(EQ|ETF|SEC)/.test(id))
+    return { what:`Equity / ETF data failed a consistency check.`, exact:D.pv, why:`Totals are rolled up from a different set of holdings than the list returned, or a holding's value was not recomputed after its price or units changed.`, impact:`Stock and ETF values shown to the user do not add up across screens.`, action:`Recompute the holding and totals for this user from units and price, and compare the views named above.` };
+  if (/^BR-(DEP|TD|RD)/.test(id))
+    return { what:`Bank account or deposit data failed a consistency check.`, exact:D.pv, why:`Totals are not the sum of the accounts returned, statement data is incomplete or out of order, or the bank sent an implausible value.`, impact:`Balances, statements or cash-flow insights shown to the user are unreliable.`, action:`Check the accounts and transactions named above against the raw Account Aggregator data.` };
+  if (id.startsWith('BR-NPS'))
+    return { what:`NPS data failed a consistency check.`, exact:D.pv, why:`Tier and scheme values come from different fields of the source data, or daily returns are computed at the wrong level.`, impact:`NPS value, allocation or daily change shown to the user is wrong.`, action:`Recompute scheme value as NAV × units and compare tier totals for this user.` };
+  if (/^BR-(REIT|INVIT|AIF|CIS|LI|GI)/.test(id))
+    return { what:`This asset class's totals do not match its account list.`, exact:D.pv, why:`The summary is not computed from the accounts returned.`, impact:`The value shown for this asset class is wrong.`, action:`Recompute the total from the linked accounts for this user.` };
+  return null;
+}
+
 function explainFailure(check) {
   const desc = check.description || '';
   const details = check.details || '';
@@ -524,9 +658,11 @@ function explainFailure(check) {
     exact: details || 'No details captured',
     pv: pv(),
   };
+  const extended = explainExtended(check, D);
+  if (extended) return extended;
 
   if (desc.includes('Holdings API reachable') || desc.includes('Transactions API reachable') || desc.includes('Insights API reachable') || desc.includes('Analysis API reachable'))
-    return { what:`The API failed to return HTTP 200.`, exact:D.exact, why:`Server may be down, auth token expired mid-session, or the user has no data in this environment.`, impact:`All downstream checks for this phase are blocked.`, action:`Check API server health. Verify QA user (9819582869) has active consents in this environment.` };
+    return { what:`The API failed to return HTTP 200.`, exact:D.exact, why:`Server may be down, auth token expired mid-session, or the user has no data in this environment.`, impact:`All downstream checks for this phase are blocked.`, action:`Check API server health. Verify the test user has active consents in this environment.` };
 
   if (desc.includes('currentValue > 0'))
     return { what:`Portfolio currentValue is zero or negative.`, exact:D.pv, why:`No active holdings with non-zero values, or the valuation engine failed.`, impact:`Portfolio appears empty to users despite active investments.`, action:`Check the valuation job for this user. Verify holdings have non-zero closingUnits and valid NAV.` };
@@ -626,43 +762,6 @@ function explainFailure(check) {
 
   if (desc.includes('Unknown identifier') || desc.includes('no data leak'))
     return { what:`A random uniqueIdentifier returned unexpected data or a 500 error.`, exact:D.exact, why:`The API is not handling non-existent user lookups gracefully.`, impact:`Could expose internal error details or stack traces to clients.`, action:`Return an empty result or 404 for non-existent identifiers. Never return 500 on user-controlled input errors.` };
-
-  // ── Other asset classes (phases 8+): explain by check family ──
-  const id = check.check_id || '';
-  if (id === 'AGENT-ERR')
-    return { what:`The agent itself hit an error while running this phase, so its checks did not run.`, exact:D.exact, why:`The API returned a response shape the check did not expect.`, impact:`No coverage for this phase in this run.`, action:`Share the error text above with whoever maintains the agent so the check can be adjusted.` };
-  if (id === 'BR-AUTH-00')
-    return { what:`The agent could not log in to this client, so no checks were run.`, exact:D.exact, why:`The base URL is wrong or unreachable, or the channel ID, secret or pasted token is not valid for this environment.`, impact:`Nothing was tested for this user.`, action:`Open Run Tests Now, edit the client and correct the base URL and credentials, then run again.` };
-  if (id.startsWith('BR-AUTH'))
-    return { what:`A request with a bad or missing token was not rejected with 401.`, exact:D.exact, why:`Authentication is not enforced on this route, or the gateway answers with a different status.`, impact:`🚨 If the request was served, data is reachable without a valid login.`, action:`Confirm the route sits behind the JWT filter and returns 401 for invalid and missing tokens.` };
-  if (/^BR-GEN-(07|09|11)/.test(id) || desc.includes('blank uniqueIdentifier') || desc.includes('37-character'))
-    return { what:`A missing, blank or over-long user identifier was not cleanly rejected.`, exact:D.exact, why:`The request is not validated before processing; a 5xx means the server crashed on it.`, impact:`Malformed requests reach the service layer; a 200 with zeros hides integration mistakes from the caller.`, action:`Validate uniqueIdentifier up front and return 400 for missing, blank or over-long values.` };
-  if (id.startsWith('BR-FMT'))
-    return { what:`A malformed request (bad JSON, wrong HTTP method or wrong content type) was not answered with the right 4xx.`, exact:D.exact, why:`The error handler has no mapping for this case, so it falls through to a generic 500 or is accepted.`, impact:`Client mistakes show up as server errors, which pollutes 5xx monitoring and confuses integrators.`, action:`Map malformed body to 400, unsupported method to 405 and unsupported media type to 415 in the exception handler.` };
-  if (id.startsWith('BR-DATE'))
-    return { what:`An invalid date range or sort order was not handled correctly.`, exact:D.exact, why:`Date or enum validation is missing on this statement route.`, impact:`Users can get confusing empty or wrong statements; a 5xx means bad input crashes the call.`, action:`Reject inverted ranges, bad date formats and unknown txnOrder values with 400; return an empty list for future-only ranges.` };
-  if (id.startsWith('BR-ACC'))
-    return { what:`A request for an account or ISIN that does not belong to this user was not safely rejected.`, exact:D.exact, why:`Account ownership or mandatory-filter validation is missing on this route.`, impact:`🚨 If rows came back, one user's request can read another account's data.`, action:`Look the account up by (user, accountId) and return a 4xx when it is not the user's; enforce mandatory filters.` };
-  if (id === 'BR-DEP-30')
-    return { what:`The bank-account insights API did not reject an invalid request.`, exact:D.exact, why:`A missing or invalid from-date, to-date or frequency is not validated; a 5xx means it crashed on the missing value.`, impact:`The cash-flow screen can fail with a server error instead of a clear message.`, action:`Validate from, to and frequency before use and return 400 with a clear message.` };
-  if (id.startsWith('BR-FLT') || id.startsWith('BR-PAG'))
-    return { what:`An invalid filter or paging value was not handled correctly.`, exact:D.exact, why:`The filter value or page size is not validated or bounded.`, impact:`Bad filter values can crash the call; an unbounded page size allows very large responses.`, action:`Reject unknown filter values with 400 and cap the page size.` };
-  if (desc.includes('API reachable'))
-    return { what:`The API did not return HTTP 200 or its documented empty response.`, exact:D.exact, why:`The service is down, the token was rejected, or the call failed for this user's data.`, impact:`This asset class cannot be shown to the user, and the remaining checks for it were skipped.`, action:`Call the endpoint for this user and check the service logs for the error.` };
-  if (desc.includes('fresh (within'))
-    return { what:`Data for this asset class has not been refreshed recently.`, exact:D.exact, why:`The last Account Aggregator fetch for these accounts is old, or the consent has lapsed.`, impact:`Values shown to the user are out of date.`, action:`Check the consent status and the scheduled data-fetch for these accounts.` };
-  if (id.startsWith('BR-NW'))
-    return { what:`The net-worth response does not add up, or disagrees with the asset-class API it is built from.`, exact:D.pv, why:`A component failed silently and was left out, or the two APIs read different snapshots or apply different dedupe rules.`, impact:`The headline net-worth number and its breakdown do not match the detail screens.`, action:`Compare the component named above with its own API for this user and check the net-worth service logs for a swallowed error.` };
-  if (id.startsWith('BR-GLA') || id.startsWith('BR-CON'))
-    return { what:`The linked-accounts or consents response is internally inconsistent.`, exact:D.pv, why:`Summary counts are computed separately from the account list, or a field that should be removed is still populated.`, impact:`Account counts and totals on the landing page are wrong, or personal data is exposed where it should not be.`, action:`Recompute the summary from the same account list and review the no-PII field list.` };
-  if (/^BR-(EQ|ETF|SEC)/.test(id))
-    return { what:`Equity / ETF data failed a consistency check.`, exact:D.pv, why:`Totals are rolled up from a different set of holdings than the list returned, or a holding's value was not recomputed after its price or units changed.`, impact:`Stock and ETF values shown to the user do not add up across screens.`, action:`Recompute the holding and totals for this user from units and price, and compare the views named above.` };
-  if (/^BR-(DEP|TD|RD)/.test(id))
-    return { what:`Bank account or deposit data failed a consistency check.`, exact:D.pv, why:`Totals are not the sum of the accounts returned, statement data is incomplete or out of order, or the bank sent an implausible value.`, impact:`Balances, statements or cash-flow insights shown to the user are unreliable.`, action:`Check the accounts and transactions named above against the raw Account Aggregator data.` };
-  if (id.startsWith('BR-NPS'))
-    return { what:`NPS data failed a consistency check.`, exact:D.pv, why:`Tier and scheme values come from different fields of the source data, or daily returns are computed at the wrong level.`, impact:`NPS value, allocation or daily change shown to the user is wrong.`, action:`Recompute scheme value as NAV × units and compare tier totals for this user.` };
-  if (/^BR-(REIT|INVIT|AIF|CIS|LI|GI)/.test(id))
-    return { what:`This asset class's totals do not match its account list.`, exact:D.pv, why:`The summary is not computed from the accounts returned.`, impact:`The value shown for this asset class is wrong.`, action:`Recompute the total from the linked accounts for this user.` };
 
   // fallback
   return { what:`Check "${desc}" failed validation.`, exact:D.exact, why:`The API response did not meet the expected criteria.`, impact:`Data quality for this metric is compromised.`, action:`Review the observed value above and compare against the check definition.` };
@@ -800,10 +899,10 @@ function dur(s,e){ if(!s||!e)return'—'; const sec=Math.round((new Date(e)-new 
 // ── Results view ───────────────────────────────────────────────
 // One client/user at a time; its checks grouped by FI type (or by phase), issues first.
 const FI_ORDER = ['Mutual Funds','Equities','ETFs','Equities & ETFs','Bank Accounts','Term Deposits','Recurring Deposits','NPS','REIT / InvIT / AIF / CIS','Insurance','F&O','Net Worth','Linked Accounts & Consents','Insights Console','Platform'];
-const FI_BY_ID = [['BR-EQ','Equities'],['BR-ETF','ETFs'],['BR-SEC','Equities & ETFs'],['BR-DEP','Bank Accounts'],['BR-TD','Term Deposits'],['BR-RD','Recurring Deposits'],['BR-NPS','NPS'],['BR-NW','Net Worth'],['BR-GLA','Linked Accounts & Consents'],['BR-CON','Linked Accounts & Consents'],['BR-LI','Insurance'],['BR-GI','Insurance']];
+const FI_BY_ID = [['BR-MFST','Mutual Funds'],['BR-RCT','Bank Accounts'],['BR-PRISM','Bank Accounts'],['BR-FNO','F&O'],['BR-DDP','Linked Accounts & Consents'],['BR-IDR','Linked Accounts & Consents'],['BR-PIC','Insights Console'],['BR-EQ','Equities'],['BR-ETF','ETFs'],['BR-SEC','Equities & ETFs'],['BR-DEP','Bank Accounts'],['BR-TD','Term Deposits'],['BR-RD','Recurring Deposits'],['BR-NPS','NPS'],['BR-NW','Net Worth'],['BR-GLA','Linked Accounts & Consents'],['BR-CON','Linked Accounts & Consents'],['BR-LI','Insurance'],['BR-GI','Insurance']];
 const SEV = { FAIL:0, WARN:1, UNAVAILABLE:2, SKIP:3, PASS:4 };
 let _report = null, _checks = [];
-const _view = { ci:0, group:'fi', filter:'issues', q:'' };
+const _view = { ci:0, group:'fi', filter:'issues', q:'', rel:false };
 let _openGroups = {};   // explicit open/closed choices, keyed by group name
 
 function fiOf(check, phase) {   // reports written before FI tagging carry no fi_type
@@ -816,6 +915,7 @@ function fiOf(check, phase) {   // reports written before FI tagging carry no fi
 function flatten(client) {
   return (client.phases || []).flatMap(p => (p.checks || []).map(c => Object.assign({}, c, {
     _fi: fiOf(c, p), _phase: `P${p.phase_number} · ${p.phase_name}`, _pn: p.phase_number, _neg: /^Negative/.test(p.phase_name),
+    _rel: /^Release|Release Features$/.test(p.phase_name),
   })));
 }
 function tally(list) {
@@ -830,6 +930,8 @@ function matches(c) {
   if (f === 'failed' && c.status !== 'FAIL') return false;
   if (f === 'warnings' && c.status !== 'WARN') return false;
   if (f === 'passed' && c.status !== 'PASS') return false;
+  if (f === 'notrun' && ['PASS', 'WARN', 'FAIL'].includes(c.status)) return false;
+  if (_view.rel && !c._rel) return false;
   if (_view.q) { const q = _view.q.toLowerCase(); if (!`${c.check_id} ${c.description} ${c.details} ${c._fi}`.toLowerCase().includes(q)) return false; }
   return true;
 }
@@ -902,16 +1004,17 @@ function renderClientView() {
       <div class="seg"><button id="g-fi" onclick="setGroup('fi')">By FI type</button><button id="g-phase" onclick="setGroup('phase')">By phase</button></div>
       <div class="chips" id="chips"></div>
       <input class="search" id="search" placeholder="Search checks…" value="${esc(_view.q)}" oninput="_view.q=this.value;renderGroups()">
+      <button class="tool-btn ${_view.rel ? 'on' : ''}" onclick="toggleRelease()" title="Only checks for the upcoming pfm-core release">New in release</button>
       <button class="tool-btn" onclick="copyIssues(this)">Copy issue summary</button>
     </div>
     <div id="grp-list"></div>`;
   // FI tiles always show the full picture, whatever the filter
   const saved = _view.group; _view.group = 'fi';
-  document.getElementById('fi-grid').innerHTML = groupsOf(_checks).map(g => {
+  document.getElementById('fi-grid').innerHTML = groupsOf(_checks.filter(x => !_view.rel || x._rel)).map(g => {
     const t = tally(g.checks), w = n => (t.total ? n / t.total * 100 : 0);
     const sub = (t.FAIL || t.WARN)
       ? [t.FAIL ? `<span class="f">${t.FAIL} failed</span>` : '', t.WARN ? `<span class="w">${t.WARN} warning${t.WARN !== 1 ? 's' : ''}</span>` : ''].filter(Boolean).join(' · ')
-      : (t.PASS ? `<span class="ok">All passed</span>` : 'Not run');
+      : t.PASS && t.other ? `<span class="ok">${t.PASS} passed</span> · ${t.other} not run` : (t.PASS ? `<span class="ok">All passed</span>` : 'Not run');
     return `<button class="fi-tile ${t.status}" onclick="jumpToFi('${escAttr(g.name)}')"><div class="fi-name">${esc(g.name)}<span class="n">${t.total} checks</span></div><div class="fi-sub">${sub}</div><div class="seg-bar"><i class="f" style="width:${w(t.FAIL)}%"></i><i class="w" style="width:${w(t.WARN)}%"></i><i class="p" style="width:${w(t.PASS)}%"></i></div></button>`;
   }).join('');
   _view.group = saved;
@@ -919,10 +1022,10 @@ function renderClientView() {
 }
 
 function renderGroups() {
-  const t = tally(_checks);
+  const t = tally(_checks.filter(x => !_view.rel || x._rel));
   document.getElementById('g-fi').classList.toggle('on', _view.group === 'fi');
   document.getElementById('g-phase').classList.toggle('on', _view.group === 'phase');
-  document.getElementById('chips').innerHTML = [['issues','Issues',t.FAIL + t.WARN],['failed','Failed',t.FAIL],['warnings','Warnings',t.WARN],['passed','Passed',t.PASS],['all','All',t.total]]
+  document.getElementById('chips').innerHTML = [['issues','Issues',t.FAIL + t.WARN],['failed','Failed',t.FAIL],['warnings','Warnings',t.WARN],['passed','Passed',t.PASS],['notrun','Not run',t.other],['all','All',t.total]]
     .map(([k, l, n]) => `<button class="chip ${_view.filter === k ? 'on' : ''}" onclick="setFilter('${k}')">${l}<span>${n}</span></button>`).join('');
   const c = _report.clients[_view.ci];
   const shown = _checks.filter(matches);
@@ -930,14 +1033,14 @@ function renderGroups() {
   const defaultOpen = _view.filter !== 'all' && _view.filter !== 'passed' || !!_view.q;
   const el = document.getElementById('grp-list');
   if (!groups.length) {
-    el.innerHTML = `<div class="none-card">${_view.q ? 'No checks match your search.' : (_view.filter === 'issues' || _view.filter === 'failed' || _view.filter === 'warnings') ? `Nothing here — no ${_view.filter === 'issues' ? 'issues' : _view.filter} for this user. ${t.PASS} checks passed.` : 'No checks to show.'}</div>`;
+    el.innerHTML = `<div class="none-card">${_view.rel && !_checks.some(x => x._rel) ? 'This run has no release checks. Run again with “Include checks for the upcoming release” ticked.' : _view.q ? 'No checks match your search.' : (_view.filter === 'issues' || _view.filter === 'failed' || _view.filter === 'warnings') ? `Nothing here — no ${_view.filter === 'issues' ? 'issues' : _view.filter} for this user. ${t.PASS} checks passed.` : 'No checks to show.'}</div>`;
     return;
   }
   el.innerHTML = groups.map(g => {
-    const all = _checks.filter(x => (_view.group === 'fi' ? x._fi : x._phase) === g.name);
+    const all = _checks.filter(x => (_view.group === 'fi' ? x._fi : x._phase) === g.name && (!_view.rel || x._rel));
     const open = g.name in _openGroups ? _openGroups[g.name] : defaultOpen;
     const rows = g.checks.slice().sort((a, b) => (SEV[a.status] ?? 2) - (SEV[b.status] ?? 2)).map(x => {
-      const tags = `<span class="tag">${esc(_view.group === 'fi' ? x._phase : x._fi)}</span>${x._neg ? '<span class="tag neg">Negative test</span>' : ''}`;
+      const tags = `<span class="tag">${esc(_view.group === 'fi' ? x._phase : x._fi)}</span>${x._rel ? '<span class="tag rel">New in release</span>' : ''}${x._neg ? '<span class="tag neg">Negative test</span>' : ''}`;
       return renderCheck(x, c.name, c.environment, tags);
     }).join('');
     return `<div class="grp ${open ? 'open' : ''}" id="${gid(g.name)}">
@@ -953,6 +1056,7 @@ function renderGroups() {
 function selectClient(i) { _view.ci = i; _openGroups = {}; renderClientView(); }
 function setGroup(g) { _view.group = g; _openGroups = {}; renderGroups(); }
 function setFilter(f) { _view.filter = f; _openGroups = {}; renderGroups(); }
+function toggleRelease() { _view.rel = !_view.rel; _openGroups = {}; renderClientView(); }
 function toggleGroup(name) {
   const el = document.getElementById(gid(name)); if (!el) return;
   _openGroups[name] = !el.classList.contains('open'); el.classList.toggle('open');
@@ -1162,6 +1266,7 @@ async function startRun() {
       clientIds: [..._selected],
       negative: document.getElementById('opt-negative').checked,
       netWorth: document.getElementById('opt-networth').checked,
+      release: document.getElementById('opt-release').checked,
     }});
     document.getElementById('run-log').textContent = '';
     document.getElementById('run-bar').style.width = '2%';
