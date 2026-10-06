@@ -78,6 +78,7 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
 .env-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; }
 .env-badge.UAT { background: #EFF8FF; color: #1570EF; border: 1px solid #B2DDFF; }
 .env-badge.PROD { background: var(--amber-light); color: #B54708; border: 1px solid #FEC84B; }
+.env-badge.SIT { background: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-300); }
 .sbadge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
 .sbadge.PASS{background:var(--green-light);color:#027A48;border:1px solid #A9EFC5}
 .sbadge.FAIL{background:var(--red-light);color:#B42318;border:1px solid #FECDCA}
@@ -312,6 +313,34 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
 .tool-btn.on { border-color:var(--purple); background:var(--purple-light); color:var(--purple-dark); }
 .none-card { background:var(--white); border:1px dashed var(--gray-300); border-radius:10px; padding:28px; text-align:center; font-size:13px; color:var(--gray-500); }
 
+/* ── Client directory ── */
+.dir { background:var(--white); border:1px solid var(--gray-200); border-radius:var(--radius); box-shadow:var(--shadow-sm); margin-bottom:18px; overflow:hidden; }
+.dir-hdr { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--gray-100); flex-wrap:wrap; }
+.dir-hdr .ttl { font-size:14px; font-weight:600; color:var(--gray-900); margin-right:auto; }
+.dir-hdr .sum { font-size:12px; color:var(--gray-500); }
+.dir-env { font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--gray-500); padding:8px 16px 4px; background:var(--gray-50); border-top:1px solid var(--gray-100); }
+.dir-row { display:grid; grid-template-columns:14px minmax(160px,1.3fr) 56px minmax(200px,1.6fr) 70px minmax(180px,1.4fr) auto; gap:12px; align-items:center; padding:9px 16px; border-top:1px solid var(--gray-100); cursor:pointer; font-size:13px; }
+.dir-row:hover { background:var(--gray-50); }
+.dir-row.sel { background:var(--purple-light); }
+.dir-row .nm { font-weight:600; color:var(--gray-900); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dir-row .host { color:var(--gray-500); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dir-row .users { color:var(--gray-500); font-size:12px; white-space:nowrap; }
+.dir-row .last { font-size:12px; color:var(--gray-500); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dir-row .last b.f{color:#B42318} .dir-row .last b.w{color:#B54708} .dir-row .last b.p{color:#027A48}
+.dir-row .act { display:flex; gap:4px; }
+.sdot { width:8px; height:8px; border-radius:50%; background:var(--gray-300); flex-shrink:0; }
+.sdot.PASS{background:var(--green)} .sdot.WARN{background:var(--amber)} .sdot.FAIL{background:var(--red)}
+.mini { padding:4px 9px; font-size:11px; font-weight:600; font-family:inherit; border:1px solid var(--gray-300); border-radius:6px; background:var(--white); color:var(--gray-700); cursor:pointer; }
+.mini:hover { background:var(--gray-100); }
+.mini.run { border-color:var(--purple); color:var(--purple); }
+.mini.run:hover { background:var(--purple-light); }
+.mini:disabled { opacity:.45; cursor:not-allowed; }
+.client-head { background:var(--white); border:1px solid var(--gray-200); border-radius:var(--radius); padding:14px 20px; margin-bottom:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.client-head .meta { font-size:12px; color:var(--gray-500); }
+.client-head .meta code { font-family:'SF Mono','Fira Code',monospace; font-size:11px; background:var(--gray-100); padding:1px 5px; border-radius:4px; }
+.hint { font-size:12px; color:var(--gray-500); padding:4px 16px 10px; }
+@media(max-width:900px){ .dir-row{grid-template-columns:14px 1fr 56px auto} .dir-row .host,.dir-row .users,.dir-row .last{display:none} }
+
 /* ── Local runner / client manager ── */
 .modal.wide { width: 640px; max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
 .modal.wide .modal-body { overflow-y: auto; }
@@ -431,7 +460,7 @@ textarea.txt-input { resize:vertical; min-height:58px; font-family:'SF Mono','Fi
             <input type="hidden" id="cf-id">
             <div class="cl-grid">
               <div><label class="field-lbl" for="cf-name">Client name</label><input class="txt-input" id="cf-name" placeholder="e.g. PNB" autocomplete="off"></div>
-              <div><label class="field-lbl" for="cf-env">Environment</label><select class="txt-input" id="cf-env"><option value="uat">UAT</option><option value="prod">PROD</option></select></div>
+              <div><label class="field-lbl" for="cf-env">Environment</label><select class="txt-input" id="cf-env"><option value="prod">PROD</option><option value="uat">UAT</option><option value="sit">SIT</option></select></div>
               <div class="full"><label class="field-lbl" for="cf-url">Base URL</label><input class="txt-input" id="cf-url" placeholder="https://client.fiu.finfactor.in" autocomplete="off" spellcheck="false"></div>
               <div><label class="field-lbl" for="cf-cid">Channel ID</label><input class="txt-input" id="cf-cid" placeholder="pfm@client" autocomplete="off" spellcheck="false"></div>
               <div><label class="field-lbl" for="cf-sec">Channel secret</label><input class="txt-input" id="cf-sec" type="password" autocomplete="new-password"></div>
@@ -962,7 +991,7 @@ function dur(s,e){ if(!s||!e)return'—'; const sec=Math.round((new Date(e)-new 
 const FI_ORDER = ['Mutual Funds','Equities','ETFs','Equities & ETFs','Bank Accounts','Term Deposits','Recurring Deposits','NPS','REIT / InvIT / AIF / CIS','Insurance','F&O','Net Worth','Linked Accounts & Consents','Insights Console','Platform'];
 const FI_BY_ID = [['BR-MF','Mutual Funds'],['BR-RCT','Bank Accounts'],['BR-PRISM','Bank Accounts'],['BR-FNO','F&O'],['BR-DDP','Linked Accounts & Consents'],['BR-IDR','Linked Accounts & Consents'],['BR-PIC','Insights Console'],['BR-EQ','Equities'],['BR-ETF','ETFs'],['BR-SEC','Equities & ETFs'],['BR-DEP','Bank Accounts'],['BR-TD','Term Deposits'],['BR-RD','Recurring Deposits'],['BR-NPS','NPS'],['BR-NW','Net Worth'],['BR-GLA','Linked Accounts & Consents'],['BR-CON','Linked Accounts & Consents'],['BR-LI','Insurance'],['BR-GI','Insurance']];
 const SEV = { FAIL:0, WARN:1, UNAVAILABLE:2, SKIP:3, PASS:4 };
-let _report = null, _checks = [];
+let _report = null, _checks = [], _entries = [], _dir = [], _sel = null, _dirEnv = 'ALL', _dirQ = '';
 const _view = { ci:0, group:'fi', filter:'issues', q:'', rel:false };
 let _openGroups = {};   // explicit open/closed choices, keyed by group name
 
@@ -1011,44 +1040,152 @@ function pills(t) {
 }
 function gid(name) { return 'grp-' + name.replace(/[^A-Za-z0-9]+/g, '-'); }
 
-function renderDashboard(data) {
+function bannerHtml(data) {
   _reportDate = formatDate(data.run_started);
-  const s=data.overall_status||'UNAVAILABLE';
-  const pr=data.total_checks>0?Math.round(data.passed/data.total_checks*100):0;
-  const icon={PASS:'✓',FAIL:'✕',WARN:'!',UNAVAILABLE:'?'}[s]||'?';
-  const title={PASS:'All Checks Passed',FAIL:'Failures Detected',WARN:'Warnings Found',UNAVAILABLE:'No Data'}[s]||s;
-  const n=(data.clients||[]).length;
-  document.getElementById('last-updated').textContent=`Last run: ${_reportDate}`;
+  const st = data.overall_status || 'UNAVAILABLE';
+  const pr = data.total_checks > 0 ? Math.round(data.passed / data.total_checks * 100) : 0;
+  const icon = { PASS:'✓', FAIL:'✕', WARN:'!', UNAVAILABLE:'?' }[st] || '?';
+  const title = { PASS:'All Checks Passed', FAIL:'Failures Detected', WARN:'Warnings Found', UNAVAILABLE:'No Data' }[st] || st;
+  const n = (data.clients || []).length;
+  const names = [...new Set((data.clients || []).map(c => c.client_name || clientNameOf(c.name)))];
+  document.getElementById('last-updated').textContent = `Last run: ${_reportDate}`;
   return `
-    <div class="status-banner ${s}">
+    <div class="status-banner ${st}">
       <div class="banner-left"><div class="banner-icon">${icon}</div>
-        <div><div class="banner-title">${title}</div><div class="banner-sub">${_reportDate} &nbsp;·&nbsp; ${dur(data.run_started,data.run_completed)} &nbsp;·&nbsp; ${n} user${n!==1?'s':''} tested &nbsp;·&nbsp; run ${esc(data.run_id||'—')}</div></div>
+        <div><div class="banner-title">${title}</div><div class="banner-sub">Latest run ${_reportDate} &nbsp;·&nbsp; ${dur(data.run_started, data.run_completed)} &nbsp;·&nbsp; ${names.length} client${names.length !== 1 ? 's' : ''}, ${n} user${n !== 1 ? 's' : ''}: ${esc(names.slice(0, 4).join(', '))}${names.length > 4 ? ' …' : ''}</div></div>
       </div>
       <div class="banner-stats">
-        <div class="bstat"><span class="val n">${data.total_checks||0}</span><span class="lbl">Checks</span></div>
-        <div class="bstat"><span class="val pass">${data.passed||0}</span><span class="lbl">Passed</span></div>
-        <div class="bstat"><span class="val warn">${data.warnings||0}</span><span class="lbl">Warnings</span></div>
-        <div class="bstat"><span class="val fail">${data.failed||0}</span><span class="lbl">Failed</span></div>
+        <div class="bstat"><span class="val n">${data.total_checks || 0}</span><span class="lbl">Checks</span></div>
+        <div class="bstat"><span class="val pass">${data.passed || 0}</span><span class="lbl">Passed</span></div>
+        <div class="bstat"><span class="val warn">${data.warnings || 0}</span><span class="lbl">Warnings</span></div>
+        <div class="bstat"><span class="val fail">${data.failed || 0}</span><span class="lbl">Failed</span></div>
         <div class="bstat"><span class="val p">${pr}%</span><span class="lbl">Pass Rate</span></div>
       </div>
-    </div>
+    </div>`;
+}
+
+function renderDashboard(data) {
+  return (data && (data.clients || []).length ? bannerHtml(data) : '') + `
+    <div id="directory"></div>
+    <div id="client-head"></div>
     <div class="ctabs" id="ctabs"></div>
     <div id="client-view"></div>`;
 }
 
+// ── Client directory ───────────────────────────────────────────
+// Every client the runner knows (from the admin portal list + credentials sheet), with its last result.
+// Without the runner (hosted page) the directory is built from the clients in the published report.
+function clientNameOf(label) { return String(label || '').split(' · ')[0]; }
+function clientKey(entry) {   // reports from before client ids were recorded are matched to the runner's client by name
+  if (entry.client_id) return entry.client_id;
+  const nm = clientNameOf(entry.name);
+  const hit = _clients.find(c => c.name.toLowerCase() === nm.toLowerCase());
+  return hit ? hit.id : 'n:' + nm;
+}
+
+function buildDirectory() {
+  const inReport = new Map();
+  for (const e of (_report && _report.clients) || []) {
+    const k = clientKey(e);
+    if (!inReport.has(k)) inReport.set(k, { users: [], name: e.client_name || clientNameOf(e.name), environment: (e.environment || '').toLowerCase(), host: e.host || '' });
+    inReport.get(k).users.push(e);
+  }
+  const rows = [];
+  if (_runnerUp && _clients.length) {
+    for (const c of _clients) {
+      const r = inReport.get(c.id);
+      const last = r ? { at: _report.run_started, users: r.users.length, failed: r.users.reduce((n, u) => n + u.failed, 0), warnings: r.users.reduce((n, u) => n + u.warnings, 0), passed: r.users.reduce((n, u) => n + u.passed, 0), inLatest: true } : c.lastRun;
+      if (last && !last.status) last.status = last.failed ? 'FAIL' : last.warnings ? 'WARN' : 'PASS';
+      rows.push({ id: c.id, name: c.name, environment: c.environment, baseUrl: c.baseUrl, tenantId: c.tenantId, urlSource: c.urlSource, uids: c.uids, hasLogin: c.hasSecret || c.hasToken, last, fromRunner: true });
+    }
+    for (const [k, r] of inReport) if (!rows.some(x => x.id === k)) rows.push({ id: k, name: r.name, environment: r.environment, baseUrl: r.host ? 'https://' + r.host : '', uids: [], hasLogin: false, last: { at: _report.run_started, users: r.users.length, failed: r.users.reduce((n, u) => n + u.failed, 0), warnings: r.users.reduce((n, u) => n + u.warnings, 0), passed: r.users.reduce((n, u) => n + u.passed, 0), inLatest: true, status: r.users.some(u => u.failed) ? 'FAIL' : r.users.some(u => u.warnings) ? 'WARN' : 'PASS' } });
+  } else {
+    for (const [k, r] of inReport) rows.push({ id: k, name: r.name, environment: r.environment, baseUrl: r.host ? 'https://' + r.host : '', uids: [], hasLogin: false, last: { at: _report.run_started, users: r.users.length, failed: r.users.reduce((n, u) => n + u.failed, 0), warnings: r.users.reduce((n, u) => n + u.warnings, 0), passed: r.users.reduce((n, u) => n + u.passed, 0), inLatest: true, status: r.users.some(u => u.failed) ? 'FAIL' : r.users.some(u => u.warnings) ? 'WARN' : 'PASS' } });
+  }
+  return rows;
+}
+
+function renderDirectory() {
+  const el = document.getElementById('directory');
+  if (!el) return;
+  _dir = buildDirectory();
+  const envs = ['prod', 'uat', 'sit'];
+  const q = _dirQ.toLowerCase();
+  const shown = _dir.filter(c => (_dirEnv === 'ALL' || c.environment === _dirEnv.toLowerCase()) && (!q || `${c.name} ${c.baseUrl} ${c.tenantId || ''}`.toLowerCase().includes(q)));
+  const counts = { total: _dir.length, login: _dir.filter(c => c.hasLogin).length, run: _dir.filter(c => c.last).length, failing: _dir.filter(c => c.last && c.last.status === 'FAIL').length };
+  const chips = ['ALL', 'PROD', 'UAT', 'SIT'].map(e => `<button class="chip ${_dirEnv === e ? 'on' : ''}" onclick="_dirEnv='${e}';renderDirectory()">${e === 'ALL' ? 'All' : e}<span>${e === 'ALL' ? _dir.length : _dir.filter(c => c.environment === e.toLowerCase()).length}</span></button>`).join('');
+  let body = '';
+  for (const env of envs) {
+    const rows = shown.filter(c => c.environment === env).sort((a, b) => (SEV[(a.last || {}).status] ?? 9) - (SEV[(b.last || {}).status] ?? 9) || a.name.localeCompare(b.name));
+    if (!rows.length) continue;
+    body += `<div class="dir-env">${env.toUpperCase()} · ${rows.length}</div>` + rows.map(c => {
+      let host = c.baseUrl; try { host = new URL(c.baseUrl).host; } catch (_) {}
+      const l = c.last;
+      const lastTxt = l ? `${formatDate(l.at).replace(' IST', '')} · <b class="f">${l.failed} failed</b> · <b class="w">${l.warnings} warn</b> · <b class="p">${l.passed} passed</b>${l.inLatest ? '' : ' · earlier run'}` : (c.fromRunner ? (c.hasLogin ? (c.uids.length ? 'Not run yet' : 'No users to test yet') : 'No channel login yet') : '—');
+      return `<div class="dir-row ${_sel === c.id ? 'sel' : ''}" onclick="selectClientId('${escAttr(c.id)}')">
+        <span class="sdot ${l ? l.status : ''}"></span>
+        <span class="nm" title="${escAttr(c.name)}">${esc(c.name)}</span>
+        <span class="env-badge ${c.environment.toUpperCase()}">${c.environment.toUpperCase()}</span>
+        <span class="host" title="${escAttr(c.baseUrl)}">${esc(host)}</span>
+        <span class="users">${c.fromRunner ? `${c.uids.length} user${c.uids.length !== 1 ? 's' : ''}` : `${l ? l.users : 0} tested`}</span>
+        <span class="last">${lastTxt}</span>
+        <span class="act" onclick="event.stopPropagation()">${c.fromRunner ? `<button class="mini run" ${c.hasLogin && c.uids.length ? '' : 'disabled title="Add a login and users first"'} onclick="openRunModal('${escAttr(c.id)}')">Run</button><button class="mini" onclick="openRunModal('${escAttr(c.id)}', true)">Edit</button>` : ''}</span>
+      </div>`;
+    }).join('');
+  }
+  el.innerHTML = `<div class="dir">
+    <div class="dir-hdr"><span class="ttl">Clients</span><span class="sum">${counts.total} clients · ${counts.login} with a login · ${counts.run} run · ${counts.failing} failing</span>
+      <div class="chips">${chips}</div>
+      <input class="search" style="margin-left:0;max-width:220px" placeholder="Search clients…" value="${esc(_dirQ)}" oninput="_dirQ=this.value;renderDirectory()">
+    </div>
+    ${body || '<div class="hint">No clients match.</div>'}
+    ${_runnerUp ? '' : '<div class="hint">Start the local runner to see every configured client and run checks; this list shows only the clients in the published report.</div>'}
+  </div>`;
+}
+
+async function selectClientId(id) {
+  _sel = id;
+  const row = _dir.find(c => c.id === id);
+  let entries = ((_report && _report.clients) || []).filter(e => clientKey(e) === id);
+  let from = 'latest';
+  if (!entries.length && _runnerUp && row && row.fromRunner) {
+    try { const doc = await rfetch('/api/results/' + id); entries = doc.users || []; from = doc.at; } catch (_) { entries = []; }
+  }
+  _entries = entries;
+  renderDirectory();
+  const head = document.getElementById('client-head');
+  if (!row) { head.innerHTML = ''; return; }
+  let host = row.baseUrl; try { host = new URL(row.baseUrl).host; } catch (_) {}
+  head.innerHTML = `<div class="client-head">
+      <div class="card-title">${esc(row.name)}<span class="env-badge ${row.environment.toUpperCase()}">${row.environment.toUpperCase()}</span></div>
+      <div class="meta"><code>${esc(host || '—')}</code>${row.tenantId ? ` &nbsp;·&nbsp; tenant <code>${esc(row.tenantId)}</code>` : ''}${row.urlSource && /derived/.test(row.urlSource) ? ` &nbsp;·&nbsp; <span style="color:#B54708">URL ${esc(row.urlSource)}</span>` : ''}${row.fromRunner ? ` &nbsp;·&nbsp; ${row.uids.length} user${row.uids.length !== 1 ? 's' : ''} configured` : ''}</div>
+      ${from !== 'latest' && entries.length ? `<div class="meta">Showing an earlier run: ${formatDate(from)}</div>` : ''}
+      <div style="margin-left:auto;display:flex;gap:6px">${row.fromRunner ? `<button class="tool-btn" onclick="openRunModal('${escAttr(row.id)}', true)">Edit client</button><button class="btn-trigger" ${row.hasLogin && row.uids.length ? '' : 'disabled'} onclick="openRunModal('${escAttr(row.id)}')">Run checks</button>` : ''}</div>
+    </div>`;
+  if (!entries.length) {
+    document.getElementById('ctabs').innerHTML = '';
+    document.getElementById('client-view').innerHTML = `<div class="none-card">No results for ${esc(row.name)} yet.${row.fromRunner ? (row.hasLogin ? (row.uids.length ? ' Click Run checks.' : ' Add the users to test (Edit client), then run.') : ' Enter the channel secret or a token (Edit client), then run.') : ''}</div>`;
+    return;
+  }
+  const firstBad = entries.findIndex(c => c.failed > 0);
+  _view.ci = firstBad >= 0 ? firstBad : 0;
+  _openGroups = {};
+  renderClientView();
+}
+
 function renderClientView() {
-  const clients = _report.clients || [];
-  document.getElementById('ctabs').innerHTML = clients.map((c, i) => {
+  const clients = _entries;
+  document.getElementById('ctabs').innerHTML = clients.length > 1 ? clients.map((c, i) => {
     const issues = c.failed + c.warnings, st = c.failed ? 'FAIL' : c.warnings ? 'WARN' : 'PASS';
-    return `<button class="ctab ${i === _view.ci ? 'active' : ''}" onclick="selectClient(${i})"><span class="sdot ${st}"></span>${esc(c.name)}<span class="env-badge ${c.environment}">${c.environment}</span><span class="cnt">${issues ? issues + ' issue' + (issues !== 1 ? 's' : '') : 'clean'}</span></button>`;
-  }).join('');
+    return `<button class="ctab ${i === _view.ci ? 'active' : ''}" onclick="selectClient(${i})"><span class="sdot ${st}"></span>User ${esc(c.user || c.name.split(' · ')[1] || (i + 1))}<span class="cnt">${issues ? issues + ' issue' + (issues !== 1 ? 's' : '') : 'clean'}</span></button>`;
+  }).join('') : '';
   const c = clients[_view.ci];
   _checks = flatten(c);
   const pr = c.total_checks > 0 ? Math.round(c.passed / c.total_checks * 100) : 0;
   document.getElementById('client-view').innerHTML = `
     <div class="panel">
       <div class="panel-hdr">
-        <div class="card-title">${esc(c.name)}<span class="env-badge ${c.environment}">${c.environment}</span><span class="sbadge ${c.status}">${c.status}</span></div>
+        <div class="card-title">${esc(c.client_name || clientNameOf(c.name))}${c.user ? `<span style="font-weight:500;color:var(--gray-500)">user ${esc(c.user)}</span>` : ''}<span class="env-badge ${c.environment}">${c.environment}</span><span class="sbadge ${c.status}">${c.status}</span></div>
         <div class="panel-meta">${formatDate(c.run_started)} &nbsp;·&nbsp; ${dur(c.run_started, c.run_completed)}</div>
       </div>
       <div class="card-stats" style="border-bottom:none">
@@ -1088,7 +1225,7 @@ function renderGroups() {
   document.getElementById('g-phase').classList.toggle('on', _view.group === 'phase');
   document.getElementById('chips').innerHTML = [['issues','Issues',t.FAIL + t.WARN],['failed','Failed',t.FAIL],['warnings','Warnings',t.WARN],['passed','Passed',t.PASS],['notrun','Not run',t.other],['all','All',t.total]]
     .map(([k, l, n]) => `<button class="chip ${_view.filter === k ? 'on' : ''}" onclick="setFilter('${k}')">${l}<span>${n}</span></button>`).join('');
-  const c = _report.clients[_view.ci];
+  const c = _entries[_view.ci];
   const shown = _checks.filter(matches);
   const groups = groupsOf(shown);
   const defaultOpen = _view.filter !== 'all' && _view.filter !== 'passed' || !!_view.q;
@@ -1131,7 +1268,7 @@ function jumpToFi(name) {
   document.getElementById(gid(name))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function copyIssues(btn) {
-  const c = _report.clients[_view.ci];
+  const c = _entries[_view.ci];
   const saved = _view.group; _view.group = 'fi';
   const groups = groupsOf(_checks.filter(x => x.status === 'FAIL' || x.status === 'WARN'));
   _view.group = saved;
@@ -1180,19 +1317,20 @@ function emptyState(msg) {
   return `<div class="err-card"><div style="font-size:32px;margin-bottom:12px">📋</div><div style="font-size:16px;font-weight:600;margin-bottom:6px">No results yet</div><div style="font-size:13px;color:var(--gray-500);line-height:1.6">Click <strong>Run Tests Now</strong>, add a client with the users you want to test, and run the checks.${msg ? `<br><small style="color:var(--gray-400)">${esc(msg)}</small>` : ''}</div></div>`;
 }
 
-function showReport(data) {
-  if (!data || !(data.clients || []).length) {
+async function showReport(data) {
+  _report = (data && data.clients) ? data : { clients: [] };
+  if (!_report.clients.length) document.getElementById('last-updated').textContent = 'No runs yet';
+  if (_runnerUp) { try { _clients = (await rfetch('/api/clients')).clients || []; } catch (_) {} }
+  if (!_report.clients.length && !(_runnerUp && _clients.length)) {
     document.getElementById('main-content').innerHTML = emptyState((data && data.errors || []).join(' · '));
-    document.getElementById('last-updated').textContent = 'No runs yet';
     return;
   }
-  _report = data;
-  const firstBad = data.clients.findIndex(c => c.failed > 0);
-  _view.ci = Math.min(_view.ci, data.clients.length - 1);
-  if (firstBad >= 0 && !data.clients[_view.ci].failed) _view.ci = firstBad;
-  _openGroups = {};
-  document.getElementById('main-content').innerHTML = renderDashboard(data);
-  renderClientView();
+  document.getElementById('main-content').innerHTML = renderDashboard(_report);
+  renderDirectory();
+  const keys = _report.clients.map(clientKey);
+  const want = (_sel && _dir.some(c => c.id === _sel)) ? _sel : (keys.find(k => _report.clients.find(e => clientKey(e) === k && e.failed > 0)) || keys[0] || null);
+  if (want) selectClientId(want);
+  else document.getElementById('client-view').innerHTML = '<div class="none-card">Select a client above to see its results, or run the checks for it.</div>';
 }
 
 async function loadReport(){
@@ -1204,14 +1342,17 @@ async function loadReport(){
     }
     const r = await fetch('reports/latest_report.json?t=' + Date.now());
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    showReport(await r.json());
+    await showReport(await r.json());
   } catch(e) {
     document.getElementById('main-content').innerHTML = emptyState(e.message);
   }
 }
 
 // ── Run modal: clients, options, progress ──────────────────────
-function openRunModal() {
+let _modalClient = null, _modalEdit = false;
+function openRunModal(clientId, edit) {
+  _modalClient = clientId || null; _modalEdit = !!edit;
+  if (clientId) _selected = new Set([clientId]);
   document.getElementById('run-modal').classList.add('open');
   renderRunModal();
   refreshRunner();
@@ -1244,7 +1385,7 @@ async function loadClients() {
         <input type="checkbox" ${_selected.has(c.id) ? 'checked' : ''} onchange="toggleClient('${c.id}', this.checked)">
         <div class="cl-main">
           <div class="cl-name">${esc(c.name)}<span class="env-badge ${c.environment.toUpperCase()}">${c.environment.toUpperCase()}</span></div>
-          <div class="cl-meta">${esc(host)} · ${n} user${n !== 1 ? 's' : ''} · ${c.hasToken ? 'token' : esc(c.channelId)}</div>
+          <div class="cl-meta">${esc(host)} · ${n} user${n !== 1 ? 's' : ''} · ${c.hasToken ? 'token' : c.hasSecret ? esc(c.channelId) : '<span style="color:#B54708">no login</span>'}</div>
         </div>
         <button class="cl-btn" onclick="openClientForm('${c.id}')">Edit</button>
         <button class="cl-btn del" onclick="deleteClient('${c.id}')">Remove</button>
@@ -1253,6 +1394,10 @@ async function loadClients() {
   }
   document.getElementById('run-options').style.display = _clients.length ? 'block' : 'none';
   updateRunButton();
+  if (_modalEdit && _modalClient) { openClientForm(_modalClient); _modalEdit = false; }
+  else if (_modalClient) { const r = document.querySelector('#client-list input[type=checkbox]:checked'); if (r) r.scrollIntoView({ block: 'center' }); }
+  const sel = _clients.filter(c => _selected.has(c.id));
+  if (sel.some(c => c.environment === 'prod')) document.getElementById('opt-negative').checked = false;
 }
 
 function toggleClient(id, on) {
