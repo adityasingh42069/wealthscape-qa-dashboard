@@ -663,6 +663,23 @@ function explainExtended(check, D) {
   // ---- MF reconciliation (invested value, returns, XIRR, dedupe, classification vs the transactions)
   if (/^BR-MF(IV|RT|DD|CL)-/.test(id)) {
     const named = (D.exact.match(/— (equals the value with[^|]*|matches the value with[^|(]*)/) || [])[1];
+    // variants of a check id that the agent reports under their own description
+    if (id === 'BR-MFIV-03' && /history is incomplete/.test(desc))
+      return E(`Some folios' invested value differs from their transactions, but those transactions do not even explain the units held.`,
+        `The feed delivered only part of the folio's history, so the recomputed cost and the shown cost were built from different rows.`,
+        `Indicative only: the invested value cannot be verified until the history is complete.`,
+        `Treat together with the units check (BR-MFIV-02); fix the missing history first, then re-check the invested value.`);
+    if (id === 'BR-MFRT-05' && /never 0/.test(desc))
+      return E(`A folio with cash flows shows XIRR 0.`, `The XIRR routine returned nothing (or 0 was stored) although the folio's cash flows give a return.`,
+        `The annualised return shown for the folio is missing, not merely approximate.`, `Solve XIRR over the folio's cash flows; 0 must only appear when there is nothing to solve.`);
+    if (id === 'BR-MFRT-06' && /never 0/.test(desc))
+      return E(`A live fund with cash flows shows XIRR 0.`, `The fund XIRR was not computed although its folios have transactions and a current value.`,
+        `The annualised return shown for the fund is missing.`, `Solve one XIRR over all the fund's folios.`);
+    if (/^BR-MFRT-0[56]$/.test(id) && /indicative/.test(desc))
+      return E(`XIRR differs from the cash flows on folios priced from AA rows.`,
+        `AA rows carry the feed's NAV, which may be re-priced (see Nyvo #12), so the recomputed cash flows are only as good as those prices.`,
+        `Indicative: the XIRR may be right while the AA prices are wrong, or the other way round.`,
+        `Check the AA rows' NAVs against the fund's NAV history first; if they hold, recompute the XIRR from the statement.`);
     const M = {
       'BR-MFIV-02': [`For some folios the transactions do not add up to the units held.`, `AA often delivers only part of a folio's history, or a transaction is missing or counted twice.`, `Invested value, return and XIRR for these folios cannot be right, because they are worked out from the same transactions.`, `Compare the folio's transactions with its units. If history is short, re-fetch with a longer date range (or get MFC data); if there are more units than held, look for a repeated purchase or a missing redemption.`],
       'BR-MFIV-03': [`The invested value shown for a folio is not the first-in-first-out cost of the units still held.`, named ? `The value shown ${named.trim()}.` : `A transaction is treated differently from the PRD (bonus, IDCW reinvestment, refund or reversal), or insights was built from a different set of transactions than the statement returns.`, `Invested value, absolute return and return % shown for this folio are wrong.`, `Recompute the folio from the statement rows (oldest units sold first; bonus and reinvested units at zero cost) and check how the rows named above are classified in the processor.`],
@@ -682,7 +699,7 @@ function explainExtended(check, D) {
       'BR-MFRT-08': [`The portfolio XIRR does not match the cash flows.`, `Transactions are counted twice across MFC and AA, cash flows of excluded funds are included, or the figure is stale.`, `The headline annualised return is wrong.`, `Rebuild the portfolio cash flows from the de-duplicated statement and compare with the processor's input.`],
       'BR-MFRT-09': [`Without MFC data the portfolio XIRR is an average of folio XIRRs, and it differs from the true XIRR.`, `For AA-only users the product weights folio XIRRs by invested value instead of solving one XIRR.`, `The headline annualised return is an approximation.`, `Product decision: solve one XIRR over all AA cash flows, or keep the average and document it.`],
       'BR-MFDD-02': [`A transaction is shown twice: once from MFC and once from AA.`, `The AA row was not matched to its MFC record (no folio on AA (CDSL/NSDL) rows, dates a day apart, or MFC split it into lots).`, `Statement, invested value, realised proceeds and XIRR all count this transaction twice.`, `Match on fund, direction, units and date (AA 0-3 days after MFC, lots summed within a folio) and keep the MFC record.`],
-      'BR-MFDD-03': [`An AA (CDSL/NSDL) transaction that remains in the statement is not flagged as unmatched.`, `The unmatchedDemat flag was not set for this row.`, `Consumers cannot tell which AA rows are still waiting for MFC to catch up.`, `Set unmatchedDemat on every AA (CDSL/NSDL) row that survives dedupe.`],
+      'BR-MFDD-03': [`An AA (CDSL/NSDL) transaction with no MFC twin is not flagged as unmatched.`, `The unmatchedDemat flag was not set for this row.`, `Consumers cannot tell which AA rows are still waiting for MFC to catch up.`, `Set unmatchedDemat on every AA (CDSL/NSDL) row that survives dedupe.`],
       'BR-MFDD-04': [`The same AA transaction arrives through AA (CAMS/KFIN) and AA (CDSL/NSDL).`, `The two AA accounts hold the same units and the duplicate account was not excluded.`, `The transaction, and the units behind it, are counted twice.`, `Check the duplicate-account rule for this fund (CDSL/NSDL units equal to a CAMS/KFIN folio).`],
       'BR-MFDD-05': [`Identical transactions are repeated in the same folio.`, `The same row was stored twice, or two genuine instalments are identical.`, `If these are repeats, units and invested value are overstated.`, `Check the raw data for these rows; ignore if they are two genuine instalments.`],
       'BR-MFDD-06': [`The same folio is listed twice for a fund.`, `The MFC folio and its AA copy were not merged, or the account is linked twice.`, `Units and value for the fund are doubled.`, `Check the folio match between MFC and AA (last four digits) and the linked accounts for this folio.`],
