@@ -675,6 +675,11 @@ function explainExtended(check, D) {
     if (id === 'BR-MFRT-06' && /never 0/.test(desc))
       return E(`A live fund with cash flows shows XIRR 0.`, `The fund XIRR was not computed although its folios have transactions and a current value.`,
         `The annualised return shown for the fund is missing.`, `Solve one XIRR over all the fund's folios.`);
+    if (/^BR-MFRT-0[56]$/.test(id) && /frozen/.test(desc))
+      return E(`The XIRR shown is the rate as of an older investmentDataAsOf date, not as of the current NAV date.`,
+        `The XIRR is stored when the folio is processed and is not recomputed afterwards, while the current value keeps following the daily NAV; folios with no new transactions keep the old rate.`,
+        `The annualised return is stale: for a rising fund it is overstated, for a falling fund understated, by more the longer the folio has gone unprocessed.`,
+        `Recompute XIRR whenever the current value is refreshed (daily with the NAV), or at least on every fetch, instead of only when new transactions arrive.`);
     if (/^BR-MFRT-0[56]$/.test(id) && /indicative/.test(desc))
       return E(`XIRR differs from the cash flows on folios priced from AA rows.`,
         `AA rows carry the feed's NAV, which may be re-priced (see Nyvo #12), so the recomputed cash flows are only as good as those prices.`,
