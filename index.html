@@ -348,6 +348,19 @@ body { font-family: 'Inter', sans-serif; background: var(--gray-50); color: var(
 .runner-badge .dot { width:7px; height:7px; border-radius:50%; background:var(--gray-400); }
 .runner-badge.on { background:var(--green-light); color:#027A48; border-color:transparent; }
 .runner-badge.on .dot { background:#12B76A; }
+.runner-badge.busy { background:var(--purple-light); color:var(--purple-dark); border-color:transparent; }
+.runner-badge.busy .dot { background:var(--purple); animation:pulse 1.2s ease-in-out infinite; }
+.progress-strip { background:var(--white); border:1px solid #C4B5FD; border-left:4px solid var(--purple); border-radius:var(--radius); padding:12px 18px; margin-bottom:16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.progress-strip .spin { width:16px; height:16px; border:2px solid var(--purple-light); border-top-color:var(--purple); border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+.progress-strip .txt { font-size:13px; font-weight:600; color:var(--gray-900); }
+.progress-strip .sub { font-size:12px; color:var(--gray-500); }
+.progress-strip .bar { flex:1; min-width:160px; height:6px; background:var(--gray-100); border-radius:3px; overflow:hidden; }
+.progress-strip .bar i { display:block; height:100%; background:var(--purple); transition:width .5s; }
+.sdot.RUN { background:var(--purple); animation:pulse 1.2s ease-in-out infinite; }
+.sdot.QUEUE { background:#C4B5FD; }
+.dir-row .last .run { color:var(--purple-dark); font-weight:600; }
+.cl-row.off { opacity:.55; }
+.cl-row .why { font-size:11px; color:#B54708; margin-top:2px; }
 .runner-off { background:var(--amber-light); border-radius:8px; padding:13px 15px; font-size:12.5px; color:#93370D; line-height:1.55; }
 .runner-off code { display:block; margin:8px 0; padding:8px 10px; background:#fff; border:1px solid var(--gray-200); border-radius:6px; font-family:'SF Mono','Fira Code',monospace; font-size:12px; color:var(--gray-900); user-select:all; }
 .cl-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1.5px solid var(--gray-200); border-radius:8px; margin-bottom:8px; }
@@ -1121,15 +1134,22 @@ function renderDirectory() {
     body += `<div class="dir-env">${env.toUpperCase()} · ${rows.length}</div>` + rows.map(c => {
       let host = c.baseUrl; try { host = new URL(c.baseUrl).host; } catch (_) {}
       const l = c.last;
-      const lastTxt = l ? `${formatDate(l.at).replace(' IST', '')} · <b class="f">${l.failed} failed</b> · <b class="w">${l.warnings} warn</b> · <b class="p">${l.passed} passed</b>${l.inLatest ? '' : ' · earlier run'}` : (c.fromRunner ? (c.hasLogin ? (c.uids.length ? 'Not run yet' : 'No users to test yet') : 'No channel login yet') : '—');
+      const running = !!(_job && _job.state === 'running'), inJob = running && (_job.clientIds || []).includes(c.id);
+      const isNow = inJob && _job.currentClientId === c.id;
+      const doneIdx = inJob ? (_job.clientIds || []).indexOf(c.id) : -1, nowIdx = inJob ? (_job.clientIds || []).indexOf(_job.currentClientId) : -1;
+      const runState = !inJob ? '' : isNow ? 'RUN' : (nowIdx >= 0 && doneIdx < nowIdx) ? 'DONE' : 'QUEUE';
+      const lastTxt = runState === 'RUN' ? `<span class="run">Testing now${_job.current ? ' · ' + esc(_job.current.split(' · ').slice(1).join(' · ') || '') : ''}</span>`
+        : runState === 'QUEUE' ? '<span class="run" style="color:var(--gray-500)">Queued</span>'
+        : runState === 'DONE' ? '<span class="run">Tested in this run — result when the run completes</span>'
+        : l ? `${formatDate(l.at).replace(' IST', '')} · <b class="f">${l.failed} failed</b> · <b class="w">${l.warnings} warn</b> · <b class="p">${l.passed} passed</b>${l.inLatest ? '' : ' · earlier run'}` : (c.fromRunner ? (c.hasLogin ? (c.uids.length ? 'Not run yet' : 'No users to test yet') : 'No channel login yet') : '—');
       return `<div class="dir-row ${_sel === c.id ? 'sel' : ''}" onclick="selectClientId('${escAttr(c.id)}')">
-        <span class="sdot ${l ? l.status : ''}"></span>
+        <span class="sdot ${runState === 'RUN' ? 'RUN' : runState === 'QUEUE' ? 'QUEUE' : (l ? l.status : '')}"></span>
         <span class="nm" title="${escAttr(c.name)}">${esc(c.name)}</span>
         <span class="env-badge ${c.environment.toUpperCase()}">${c.environment.toUpperCase()}</span>
         <span class="host" title="${escAttr(c.baseUrl)}">${esc(host)}</span>
         <span class="users">${c.fromRunner ? `${c.uids.length} user${c.uids.length !== 1 ? 's' : ''}` : `${l ? l.users : 0} tested`}</span>
         <span class="last">${lastTxt}</span>
-        <span class="act" onclick="event.stopPropagation()">${c.fromRunner ? `<button class="mini run" ${c.hasLogin && c.uids.length ? '' : 'disabled title="Add a login and users first"'} onclick="openRunModal('${escAttr(c.id)}')">Run</button><button class="mini" onclick="openRunModal('${escAttr(c.id)}', true)">Edit</button>` : ''}</span>
+        <span class="act" onclick="event.stopPropagation()">${c.fromRunner ? `<button class="mini run" ${running ? 'disabled title="A run is in progress"' : c.hasLogin && c.uids.length ? '' : 'disabled title="Add a login and users first"'} onclick="openRunModal('${escAttr(c.id)}')">Run</button><button class="mini" onclick="openRunModal('${escAttr(c.id)}', true)">Edit</button>` : ''}</span>
       </div>`;
     }).join('');
   }
@@ -1160,7 +1180,7 @@ async function selectClientId(id) {
       <div class="card-title">${esc(row.name)}<span class="env-badge ${row.environment.toUpperCase()}">${row.environment.toUpperCase()}</span></div>
       <div class="meta"><code>${esc(host || '—')}</code>${row.tenantId ? ` &nbsp;·&nbsp; tenant <code>${esc(row.tenantId)}</code>` : ''}${row.urlSource && /derived/.test(row.urlSource) ? ` &nbsp;·&nbsp; <span style="color:#B54708">URL ${esc(row.urlSource)}</span>` : ''}${row.fromRunner ? ` &nbsp;·&nbsp; ${row.uids.length} user${row.uids.length !== 1 ? 's' : ''} configured` : ''}</div>
       ${from !== 'latest' && entries.length ? `<div class="meta">Showing an earlier run: ${formatDate(from)}</div>` : ''}
-      <div style="margin-left:auto;display:flex;gap:6px">${row.fromRunner ? `<button class="tool-btn" onclick="openRunModal('${escAttr(row.id)}', true)">Edit client</button><button class="btn-trigger" ${row.hasLogin && row.uids.length ? '' : 'disabled'} onclick="openRunModal('${escAttr(row.id)}')">Run checks</button>` : ''}</div>
+      <div style="margin-left:auto;display:flex;gap:6px">${row.fromRunner ? `<button class="tool-btn" onclick="openRunModal('${escAttr(row.id)}', true)">Edit client</button><button class="btn-trigger" ${(row.hasLogin && row.uids.length && !(_job && _job.state === 'running')) ? '' : 'disabled'} onclick="openRunModal('${escAttr(row.id)}')">${_job && _job.state === 'running' ? 'Run in progress…' : 'Run checks'}</button>` : ''}</div>
     </div>`;
   if (!entries.length) {
     document.getElementById('ctabs').innerHTML = '';
@@ -1287,7 +1307,7 @@ function copyIssues(btn) {
 // it is reached on localhost.
 const IS_LOCAL = ['localhost','127.0.0.1'].includes(location.hostname);
 const RUNNER = IS_LOCAL ? '' : 'http://localhost:8765';
-let _runnerUp = false, _clients = [], _selected = new Set(), _poll = null;
+let _runnerUp = false, _clients = [], _selected = new Set(), _poll = null, _job = null;
 try { localStorage.removeItem('ws_pat'); } catch (_) {}
 
 async function rfetch(path, opts = {}) {
@@ -1300,17 +1320,48 @@ async function rfetch(path, opts = {}) {
 }
 
 async function refreshRunner(showResult) {
+  let busy = false;
   try {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 2500);
     const h = await rfetch('/api/health', { signal: ctl.signal }); clearTimeout(t);
-    _runnerUp = !!h.ok;
+    _runnerUp = !!h.ok; busy = !!h.busy;
   } catch (_) { _runnerUp = false; }
+  const wasRunning = !!(_job && _job.state === 'running');
+  if (_runnerUp) {
+    try { _job = await rfetch('/api/run/current'); } catch (_) { _job = busy ? { state: 'running', unknown: true } : null; }
+  } else _job = null;
+  const running = !!(_job && _job.state === 'running');
   const badge = document.getElementById('runner-badge');
-  badge.classList.toggle('on', _runnerUp);
-  document.getElementById('runner-badge-txt').textContent = _runnerUp ? 'Runner connected' : 'Runner offline';
+  badge.classList.toggle('on', _runnerUp && !running);
+  badge.classList.toggle('busy', running);
+  document.getElementById('runner-badge-txt').textContent = running ? 'Testing in progress' : _runnerUp ? 'Runner connected' : 'Runner offline';
+  const runBtn = document.getElementById('run-now-btn');
+  runBtn.disabled = running;
+  runBtn.innerHTML = running ? '<span class="spinner-sm"></span> Running…' : '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Run Tests Now';
+  renderProgress();
+  if (document.getElementById('directory')) renderDirectory();
+  if (running && !_poll && _job.jobId) _poll = setInterval(() => pollRun(_job.jobId), 1500);   // adopt a run started elsewhere
+  if (wasRunning && !running && !_poll) loadReport();                                            // it finished while we were watching
   if (document.getElementById('run-modal').classList.contains('open') && !_poll) renderRunModal();
   if (showResult && !_runnerUp) showToast('Runner still not reachable on localhost:8765', 'error');
   return _runnerUp;
+}
+
+function renderProgress() {
+  let el = document.getElementById('progress-strip');
+  const running = !!(_job && _job.state === 'running');
+  if (!running) { if (el) el.remove(); return; }
+  if (!el) {
+    const anchor = document.getElementById('directory');
+    if (!anchor) return;
+    el = document.createElement('div'); el.id = 'progress-strip'; el.className = 'progress-strip';
+    anchor.parentNode.insertBefore(el, anchor);
+  }
+  const pct = _job.total ? Math.max(2, Math.round(_job.done / _job.total * 100)) : 2;
+  const names = (_job.clientIds || []).map(id => (_clients.find(c => c.id === id) || {}).name).filter(Boolean);
+  el.innerHTML = `<div class="spin"></div><div><div class="txt">Testing in progress${_job.total ? ` — ${Math.min(_job.done + 1, _job.total)} of ${_job.total} users` : ''}</div>
+    <div class="sub">${_job.current ? `Now: ${esc(_job.current)}` : 'Starting…'}${names.length ? ` &nbsp;·&nbsp; ${names.length} client${names.length !== 1 ? 's' : ''}: ${esc(names.slice(0, 5).join(', '))}${names.length > 5 ? ' …' : ''}` : ''}${_job.startedAt ? ` &nbsp;·&nbsp; started ${formatDate(_job.startedAt)}` : ''}</div></div>
+    <div class="bar"><i style="width:${pct}%"></i></div>`;
 }
 
 function emptyState(msg) {
@@ -1361,7 +1412,8 @@ function closeRunModal() { document.getElementById('run-modal').classList.remove
 function handleOverlayClick(e) { if (e.target === document.getElementById('run-modal')) closeRunModal(); }
 
 async function renderRunModal() {
-  const running = !!_poll;
+  const running = !!_poll || !!(_job && _job.state === 'running');
+  if (running && !_poll && _job && _job.jobId) _poll = setInterval(() => pollRun(_job.jobId), 1500);
   document.getElementById('runner-off').style.display = (!_runnerUp && !running) ? 'block' : 'none';
   document.getElementById('runner-on').style.display = (_runnerUp && !running) ? 'block' : 'none';
   document.getElementById('runner-progress').style.display = running ? 'block' : 'none';
@@ -1380,12 +1432,15 @@ async function loadClients() {
   } else {
     el.innerHTML = _clients.map(c => {
       let host = c.baseUrl; try { host = new URL(c.baseUrl).host; } catch (_) {}
-      const n = c.uids.length;
-      return `<div class="cl-row">
-        <input type="checkbox" ${_selected.has(c.id) ? 'checked' : ''} onchange="toggleClient('${c.id}', this.checked)">
+      const n = c.uids.length, hasLogin = c.hasSecret || c.hasToken;
+      const why = !hasLogin && !n ? 'Add a channel login and users to test' : !hasLogin ? 'Add a channel login first' : !n ? 'Add users to test first' : '';
+      if (why) _selected.delete(c.id);
+      return `<div class="cl-row ${why ? 'off' : ''}">
+        <input type="checkbox" ${why ? 'disabled title="' + why + '"' : ''} ${_selected.has(c.id) ? 'checked' : ''} onchange="toggleClient('${c.id}', this.checked)">
         <div class="cl-main">
           <div class="cl-name">${esc(c.name)}<span class="env-badge ${c.environment.toUpperCase()}">${c.environment.toUpperCase()}</span></div>
           <div class="cl-meta">${esc(host)} · ${n} user${n !== 1 ? 's' : ''} · ${c.hasToken ? 'token' : c.hasSecret ? esc(c.channelId) : '<span style="color:#B54708">no login</span>'}</div>
+          ${why ? `<div class="why">${why} — use Edit</div>` : ''}
         </div>
         <button class="cl-btn" onclick="openClientForm('${c.id}')">Edit</button>
         <button class="cl-btn del" onclick="deleteClient('${c.id}')">Remove</button>
@@ -1401,6 +1456,8 @@ async function loadClients() {
 }
 
 function toggleClient(id, on) {
+  const c = _clients.find(x => x.id === id);
+  if (on && (!c || !c.uids.length || !(c.hasSecret || c.hasToken))) { on = false; const box = document.querySelector(`#client-list input[onchange*="${id}"]`); if (box) box.checked = false; }
   if (on) _selected.add(id); else _selected.delete(id);
   const sel = _clients.filter(c => _selected.has(c.id));
   // Bad-input tests default off as soon as a PROD client is in the selection
@@ -1408,9 +1465,10 @@ function toggleClient(id, on) {
   updateRunButton();
 }
 function updateRunButton() {
-  const users = _clients.filter(c => _selected.has(c.id)).reduce((n, c) => n + c.uids.length, 0);
+  const chosen = _clients.filter(c => _selected.has(c.id) && c.uids.length && (c.hasSecret || c.hasToken));
+  const users = chosen.reduce((n, c) => n + c.uids.length, 0);
   const btn = document.getElementById('trigger-btn');
-  btn.disabled = users === 0;
+  btn.disabled = users === 0 || !!(_job && _job.state === 'running');
   btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>' + (users ? `Run checks for ${users} user${users !== 1 ? 's' : ''}` : 'Select a client');
 }
 
@@ -1469,7 +1527,7 @@ async function startRun() {
   err.style.display = 'none';
   try {
     const { jobId } = await rfetch('/api/run', { method: 'POST', body: {
-      clientIds: [..._selected],
+      clientIds: _clients.filter(c => _selected.has(c.id) && c.uids.length && (c.hasSecret || c.hasToken)).map(c => c.id),
       negative: document.getElementById('opt-negative').checked,
       netWorth: document.getElementById('opt-networth').checked,
       release: document.getElementById('opt-release').checked,
@@ -1497,8 +1555,9 @@ async function pollRun(jobId) {
   clearInterval(_poll); _poll = null;
   const runBtn = document.getElementById('run-now-btn');
   runBtn.disabled = false; runBtn.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Run Tests Now';
+  _job = null; renderProgress();
   if (job.state === 'done' && job.report) {
-    showReport(job.report); closeRunModal(); renderRunModal();
+    closeRunModal(); loadReport(); renderRunModal();
     showToast(`Run complete: ${job.report.passed} passed, ${job.report.warnings} warnings, ${job.report.failed} failed`, job.report.failed ? 'error' : 'success');
   } else {
     document.getElementById('run-status').textContent = 'Run failed: ' + (job.error || 'unknown error');
@@ -1522,7 +1581,7 @@ function showToast(msg, type = 'success') {
 // Close modal on Escape
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRunModal(); });
 
-loadReport(); setInterval(refreshRunner, 15000);
+loadReport(); setInterval(refreshRunner, 5000);
 </script>
 </body>
 </html>
