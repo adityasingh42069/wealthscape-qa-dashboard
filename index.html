@@ -544,7 +544,7 @@ function explainExtended(check, D) {
       is5xx ? `Simple caller mistakes show up as server errors, which hides real outages in 5xx monitoring.` : `Integrators get a misleading answer for a bad request.`,
       KNOWN[id] ? KNOWN[id][1] : `Validate this input before use and return the status shown in the check name.`);
   // ---- next release: positive checks
-  if (/^BR-(MFST|MFIV|MFRT|MFDD|MFCL|RCT|PRISM|FNO|DDP|IDR|PIC)-/.test(id) && desc.endsWith('reachable'))
+  if (/^BR-(MFST|MFIV|MFRT|MFDD|MFCL|NYVO|RCT|PRISM|FNO|DDP|IDR|PIC)-/.test(id) && desc.endsWith('reachable'))
     return E(`The new API did not answer with HTTP 200.`, `The service returned an error for this user, or the token was refused.`,
       `This release feature cannot be checked (and would not work in the app) for this user.`, `Call the endpoint for this user and look for the error in the pfm-core logs.`);
   if (id.startsWith('BR-MFST')) {
@@ -598,6 +598,26 @@ function explainExtended(check, D) {
     return E(`The insights console numbers do not add up.`, `A derived figure (total, share, band count, segment) was computed from a different set of customers than the figure it is checked against.`, `Tenant-level insights shown to the business are wrong.`, `Regenerate the report and compare the figures listed; check the generation service logs for decrypt failures.`, D.pv);
   }
 
+  // ---- client-reported issues (Nyvo, 5 Oct 2026): one check per issue number
+  if (/^BR-NYVO-/.test(id)) {
+    const n = id.slice(8);
+    const M = {
+      '01': [`A holding in holding-folio is priced at a stale or wrong NAV (Nyvo issue 1).`, `The NAV refresh job skipped the holding, or the stored NAV was not replaced by the day's NAV although the date was.`, `Current value, returns and net worth for the user are wrong.`, `Compare the holding's nav / navDate with the per-ISIN insights currentNav and re-run the NAV refresh for the ISINs listed.`],
+      '02': [`holding-folio returns different units for the same fund depending on filterZeroValueAccounts (Nyvo issue 2).`, `With the flag on, old MFC folios that are no longer held are included (or excluded) differently.`, `Clients that pass the flag see different units and values than those that do not.`, `The flag must only drop zero-value accounts; it must never change the units of a holding that stays.`],
+      '03': [`A holding's invested value is 0 or far below its purchases, or its XIRR is implausible (Nyvo issue 3).`, `Invested value was built from part of the history, or a purchase was dropped as zero-unit / partial.`, `The fund shows a wildly wrong return (for example XIRR 800%).`, `Recompute invested value from the statement rows for the funds listed; see the folio-level invested value check for the cause.`],
+      '04': [`An account has had an ACTIVE consent for days but has never been fetched (Nyvo issue 4).`, `The FI request after consent approval failed or was never scheduled for this account, while others of the same user were fetched.`, `The account shows no data at all.`, `Trigger the FI fetch for the accounts listed and check why the post-consent fetch did not run.`],
+      '05': [`The MF time-series (or sip-insights) stops at the MFC fetch date instead of the latest NAV date (Nyvo issue 5).`, `The series is only rebuilt when MFC data is fetched, not when NAVs refresh.`, `Charts end weeks before today although the holdings are priced to date.`, `Extend the series to the latest NAV date on each NAV refresh for MFC-only users.`],
+      '06': [`A matured term deposit is still valued at its pre-maturity figure, or an account stopped refreshing (Nyvo issue 6).`, `The account was not fetched after maturity, so the old principal + interest figure stays.`, `Net worth counts money that was paid out.`, `Refresh matured deposits after their maturity date, or stop valuing them.`],
+      '07': [`The insights summary counts a value that no holding carries (Nyvo issue 7).`, `A fund without an ISIN / AMC mapping is added to the summary (a blank distribution row) but not to the holdings list.`, `Summary, net worth and the holdings list disagree.`, `Find the fund behind the blank distribution row and either list it or exclude it from the summary.`],
+      '08': [`IDCW payouts are typed BUY, or statement rows have no ISIN (Nyvo issue 8).`, `type still follows the amount sign; AA rows arrived without an ISIN.`, `Consumers treat dividends as purchases, and ISIN-less rows cannot be attributed to a fund.`, `Type payouts OTHERS (PRD section 6) and resolve the ISIN for the rows listed.`],
+      '09': [`holding-folio cost figures are wrong: avgNav equals the current NAV, or costValue differs from insights (Nyvo issue 9).`, `avgNav is filled with the current NAV instead of the average purchase NAV; costValue is computed separately from insights.`, `Cost per holding cannot be taken from holding-folio, and the two APIs disagree on invested value.`, `Set avgNav = invested value ÷ units and take costValue from the same figures as insights.`],
+      '10': [`Equity holdings in the demat view have no currentValue (ETFs do) (Nyvo issue 10).`, `The equity holding view in equities-and-etfs/demat-holding does not populate currentValue.`, `Clients must compute units × last traded price themselves.`, `Populate currentValue on equity holdings as on ETF holdings.`],
+      '11': [`Time-series points have an invested value but no currentValue (Nyvo issue 11).`, `Points before the first priced NAV are written without a value.`, `Charts fall to zero on these points.`, `Price every point, or omit points that cannot be priced.`],
+      '12': [`AA rows of a fund all carry the same NAV, so their amounts are not the real purchase amounts (Nyvo issue 12).`, `The feed sent one NAV (or the current NAV) for every transaction and no amount; amount was derived as units × that NAV.`, `Invested value, average NAV and XIRR for the fund are wrong.`, `Re-price AA rows with the NAV of each transaction date before costing them.`],
+      '13': [`The MFC transactions do not add up to the units held (Nyvo issue 13).`, `Transactions are missing from the statement (MFC history is incomplete) or were dropped.`, `Invested value and XIRR are computed from an incomplete history.`, `Re-fetch MFC transactions for the funds listed and compare with the units held.`],
+    }[n];
+    if (M) return E(...M, D.pv);
+  }
   // ---- MF reconciliation (invested value, returns, XIRR, dedupe, classification vs the transactions)
   if (/^BR-MF(IV|RT|DD|CL)-/.test(id)) {
     const named = (D.exact.match(/— (equals the value with[^|]*|matches the value with[^|(]*)/) || [])[1];
