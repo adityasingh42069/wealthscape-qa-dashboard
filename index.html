@@ -399,6 +399,58 @@ textarea.txt-input { resize:vertical; min-height:58px; font-family:'SF Mono','Fi
 .toast.success { background: #027A48; }
 .toast.error { background: #B42318; }
 .toast svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.5; flex-shrink: 0; }
+/* ── Issue analysis (all clients, latest result each) ── */
+.an-wrap { display:flex; flex-direction:column; gap:14px; }
+.an-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.an-head h2 { font-size:18px; font-weight:700; color:var(--gray-900); margin:0 0 2px; }
+.an-head .sub { font-size:12.5px; color:var(--gray-500); }
+.an-tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
+.an-tile { background:var(--white); border:1px solid var(--gray-200); border-radius:10px; padding:12px 14px; }
+.an-tile .v { font-size:22px; font-weight:700; color:var(--gray-900); line-height:1.1; }
+.an-tile .v.f{color:var(--red)} .an-tile .v.w{color:var(--amber)} .an-tile .v.m{color:var(--gray-500)}
+.an-tile .l { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--gray-500); margin-top:4px; }
+.an-tile .s { font-size:11px; color:var(--gray-500); margin-top:2px; }
+.an-panels { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+.an-panel { background:var(--white); border:1px solid var(--gray-200); border-radius:10px; padding:12px 14px; }
+.an-panel .ttl { font-size:12px; font-weight:700; color:var(--gray-700); margin-bottom:8px; display:flex; justify-content:space-between; }
+.an-panel .ttl small { font-weight:500; color:var(--gray-400); }
+.an-bar { display:grid; grid-template-columns:150px 1fr 42px; align-items:center; gap:8px; font-size:12px; color:var(--gray-700); padding:3px 0; cursor:pointer; }
+.an-bar:hover .nm { color:var(--purple); }
+.an-bar .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.an-bar .trk { height:9px; background:var(--gray-100); border-radius:5px; overflow:hidden; }
+.an-bar .fil { height:100%; background:var(--red); border-radius:5px; }
+.an-bar .fil.w { background:var(--amber); }
+.an-bar .n { text-align:right; font-weight:600; color:var(--gray-700); font-variant-numeric:tabular-nums; }
+.an-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 12px; background:var(--white); border:1px solid var(--gray-200); border-radius:10px; }
+.an-tools .sep { width:1px; height:22px; background:var(--gray-200); }
+.an-tools select { padding:6px 8px; font-size:12px; font-family:inherit; border:1.5px solid var(--gray-200); border-radius:8px; background:var(--white); color:var(--gray-700); }
+.an-table { background:var(--white); border:1px solid var(--gray-200); border-radius:10px; overflow:hidden; }
+.an-row { display:grid; grid-template-columns:34px 46px minmax(260px,1fr) 118px 190px 190px 64px 24px; align-items:center; gap:10px; padding:9px 12px; border-top:1px solid var(--gray-100); font-size:12.5px; cursor:pointer; }
+.an-row:hover { background:var(--gray-50); }
+.an-row.hd { background:var(--gray-50); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--gray-500); cursor:default; border-top:none; }
+.an-row .rk { color:var(--gray-400); font-weight:600; font-variant-numeric:tabular-nums; }
+.an-row .iss .id { font-family:'SF Mono','Fira Code',monospace; font-size:11px; font-weight:700; color:var(--gray-900); }
+.an-row .iss .ds { color:var(--gray-700); margin-top:1px; }
+.an-row .fi { font-size:11px; color:var(--gray-600); }
+.an-row .ub { display:flex; flex-direction:column; gap:3px; }
+.an-row .ub .t { font-size:11px; color:var(--gray-700); font-variant-numeric:tabular-nums; }
+.an-row .ub .trk { height:7px; background:var(--gray-100); border-radius:4px; overflow:hidden; }
+.an-row .ub .fil { height:100%; border-radius:4px; background:var(--red); }
+.an-row .ub .fil.w { background:var(--amber); }
+.an-row .cl { display:flex; flex-wrap:wrap; gap:4px; }
+.an-row .cl span { font-size:10.5px; font-weight:600; background:var(--gray-100); color:var(--gray-700); border-radius:4px; padding:1px 6px; white-space:nowrap; }
+.an-row .oc { text-align:right; font-weight:600; color:var(--gray-700); font-variant-numeric:tabular-nums; }
+.an-row .car { color:var(--gray-400); font-size:11px; text-align:center; }
+.pri { display:inline-block; font-size:10.5px; font-weight:800; border-radius:5px; padding:2px 7px; letter-spacing:.3px; }
+.pri.P1{background:var(--red-light);color:#B42318;border:1px solid #FECDCA} .pri.P2{background:var(--amber-light);color:#B54708;border:1px solid #FEC84B} .pri.P3{background:var(--gray-100);color:var(--gray-600);border:1px solid var(--gray-200)}
+.an-open { padding:10px 14px 14px 92px; border-top:1px dashed var(--gray-200); background:var(--gray-50); font-size:12px; }
+.an-open .dp-body { background:var(--white); border:1px solid var(--gray-200); border-radius:8px; margin-bottom:10px; }
+.an-open .ex-ttl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--gray-400); margin:8px 0 4px; }
+.an-open .ex { display:grid; grid-template-columns:150px 1fr; gap:8px; padding:5px 0; border-top:1px solid var(--gray-100); color:var(--gray-700); }
+.an-open .ex b { color:var(--gray-900); font-weight:600; }
+.an-open .ex .d { font-family:'SF Mono','Fira Code',monospace; font-size:11px; word-break:break-word; }
+.an-empty { padding:28px; text-align:center; color:var(--gray-500); font-size:13px; }
+@media (max-width: 1100px) { .an-row { grid-template-columns:30px 44px minmax(200px,1fr) 150px 60px 20px; } .an-row .fi, .an-row .cl { display:none; } .an-open { padding-left:14px; } }
 </style>
 </head>
 <body>
@@ -414,6 +466,9 @@ textarea.txt-input { resize:vertical; min-height:58px; font-family:'SF Mono','Fi
     </div>
     <div class="nav-item" onclick="loadReport()">
       <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" stroke-dasharray="4"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>Latest Report
+    </div>
+    <div class="nav-item" id="nav-analysis" onclick="showAnalysis()">
+      <svg viewBox="0 0 24 24"><path d="M3 20h18"/><rect x="5" y="10" width="3" height="8"/><rect x="10.5" y="4" width="3" height="14"/><rect x="16" y="13" width="3" height="5"/></svg>Issue Analysis
     </div>
     <div class="nav-label">Run</div>
     <div class="nav-item" onclick="openRunModal()">
@@ -1177,6 +1232,7 @@ function renderDirectory() {
   }
   el.innerHTML = `<div class="dir">
     <div class="dir-hdr"><span class="ttl">Clients</span><span class="sum">${counts.total} clients · ${counts.login} with a login · ${counts.run} run · ${counts.failing} failing</span>
+      <button class="tool-btn" onclick="showAnalysis()" title="Every issue found across all tested users, ranked by how many users and clients it affects">Issue analysis →</button>
       <div class="chips">${chips}</div>
       <input class="search" style="margin-left:0;max-width:220px" placeholder="Search clients…" value="${esc(_dirQ)}" oninput="_dirQ=this.value;renderDirectory()">
     </div>
@@ -1419,6 +1475,184 @@ async function loadReport(){
   } catch(e) {
     document.getElementById('main-content').innerHTML = emptyState(e.message);
   }
+}
+
+// ── Issue analysis: every FAIL / WARN across the latest result of every client, ranked ──
+// Priority: P1 = failing on 3+ clients, 10+ users or half the users tested; P2 = any other failure, or a
+// warning on 3+ clients; P3 = the rest.
+const _an = { data: null, status: 'ALL', fi: 'ALL', client: 'ALL', rel: false, q: '', sort: 'priority', open: {}, note: '' };
+
+function anDocsFromReport() {   // hosted page without the runner: group the published report by client
+  const by = new Map();
+  for (const e of (_report && _report.clients) || []) {
+    const k = clientKey(e);
+    if (!by.has(k)) by.set(k, { client_id: k, name: e.client_name || clientNameOf(e.name), environment: (e.environment || '').toLowerCase(), at: _report.run_started, users: [] });
+    by.get(k).users.push(e);
+  }
+  return [...by.values()];
+}
+
+function anAggregate(docs) {
+  const tested = [], unknown = [], login = [], issues = new Map(), clients = new Map();
+  for (const d of docs) {
+    const cname = d.name || '?', cid = d.client_id || cname;
+    clients.set(cid, { name: cname, env: d.environment || '', at: d.at, tested: 0, fails: new Set(), warns: new Set() });
+    for (const u of d.users || []) {
+      const phases = u.phases || [], uid = `${cid}|${u.user || u.name || ''}`, label = u.user || (u.name || '').split(' · ').slice(1).join(' · ') || '?';
+      const bad = id => phases.some(p => (p.checks || []).some(c => c.check_id === id && c.status === 'FAIL'));
+      if (bad('BR-AUTH-00')) { login.push({ client: cname, user: label }); continue; }
+      if (bad('BR-USER-00')) { unknown.push({ client: cname, user: label }); continue; }
+      tested.push(uid); clients.get(cid).tested++;
+      for (const p of phases) for (const c of p.checks || []) {
+        if (c.status !== 'FAIL' && c.status !== 'WARN') continue;
+        const key = `${c.check_id}§${c.description}`;
+        if (!issues.has(key)) issues.set(key, { key, id: c.check_id, desc: c.description, fi: fiOf(c, p), phase: `P${p.phase_number} · ${p.phase_name}`, pn: p.phase_number,
+          rel: /^Release|Release Features$/.test(p.phase_name || ''), neg: /^Negative/.test(p.phase_name || ''), status: 'WARN', occ: 0, users: new Set(), clients: new Map(), examples: [], tol: c.tolerance || '' });
+        const it = issues.get(key);
+        it.occ++; it.users.add(uid);
+        if (c.status === 'FAIL') it.status = 'FAIL';
+        if (!it.clients.has(cid)) it.clients.set(cid, { name: cname, users: new Set(), fail: 0, warn: 0 });
+        const cc = it.clients.get(cid); cc.users.add(uid); cc[c.status === 'FAIL' ? 'fail' : 'warn']++;
+        if (it.examples.length < 8 && !it.examples.some(x => x.client === cname && x.user === label && x.status === c.status)) it.examples.push({ client: cname, user: label, status: c.status, details: c.details || '', check: c });
+        (c.status === 'FAIL' ? clients.get(cid).fails : clients.get(cid).warns).add(key);
+      }
+    }
+  }
+  const nTested = tested.length, nClients = [...clients.values()].filter(c => c.tested).length;
+  const list = [...issues.values()].map(it => {
+    const nu = it.users.size, nc = it.clients.size;
+    it.nu = nu; it.nc = nc; it.share = nTested ? nu / nTested : 0;
+    it.pri = it.status === 'FAIL' && (nc >= 3 || nu >= 10 || it.share >= 0.5) ? 'P1' : (it.status === 'FAIL' || nc >= 3) ? 'P2' : 'P3';
+    return it;
+  });
+  return { list, nTested, nClients, clients, unknown, login, at: docs.map(d => d.at).filter(Boolean).sort().slice(-1)[0] || '' };
+}
+
+function anSorted(list) {
+  const s = _an.sort, P = { P1: 0, P2: 1, P3: 2 }, S = { FAIL: 0, WARN: 1 };
+  const by = {
+    priority: (a, b) => P[a.pri] - P[b.pri] || S[a.status] - S[b.status] || b.nu - a.nu || b.nc - a.nc || b.occ - a.occ,
+    users: (a, b) => b.nu - a.nu || b.nc - a.nc || S[a.status] - S[b.status],
+    clients: (a, b) => b.nc - a.nc || b.nu - a.nu || S[a.status] - S[b.status],
+    occurrences: (a, b) => b.occ - a.occ || b.nu - a.nu,
+    fi: (a, b) => ((FI_ORDER.indexOf(a.fi) + 100) % 100) - ((FI_ORDER.indexOf(b.fi) + 100) % 100) || P[a.pri] - P[b.pri] || b.nu - a.nu,
+    check: (a, b) => a.id.localeCompare(b.id) || a.desc.localeCompare(b.desc),
+  };
+  return list.slice().sort(by[s] || by.priority);
+}
+
+function anFiltered(list) {
+  const q = _an.q.toLowerCase();
+  return list.filter(it => (_an.status === 'ALL' || it.status === _an.status) && (_an.fi === 'ALL' || it.fi === _an.fi) && (!_an.rel || it.rel)
+    && (_an.client === 'ALL' || it.clients.has(_an.client)) && (!q || `${it.id} ${it.desc} ${it.fi} ${it.phase}`.toLowerCase().includes(q)));
+}
+
+async function showAnalysis() {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.id === 'nav-analysis'));
+  const main = document.getElementById('main-content');
+  main.innerHTML = '<div class="an-empty">Collecting the latest result of every client…</div>';
+  let docs = [];
+  _an.note = '';
+  try {
+    if (_runnerUp) { docs = (await rfetch('/api/results')).clients || []; _an.note = 'latest result stored per client by the local runner'; }
+  } catch (_) { docs = []; }
+  if (!docs.length) { docs = anDocsFromReport(); _an.note = _runnerUp ? 'from the latest run report' : 'from the published report (start the local runner to include every client you have run)'; }
+  _an.data = anAggregate(docs);
+  renderAnalysis();
+}
+
+function anBack() {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', !n.id));
+  showReport(_report);
+}
+
+function renderAnalysis() {
+  const A = _an.data, main = document.getElementById('main-content');
+  if (!A || !A.nTested) { main.innerHTML = `<div class="an-wrap"><div class="an-head"><div><h2>Issue analysis</h2><div class="sub">No tested users yet. Run the checks for a client first.</div></div><button class="tool-btn" onclick="anBack()">← Clients</button></div></div>`; return; }
+  const all = A.list, shown = anSorted(anFiltered(all));
+  const nF = all.filter(i => i.status === 'FAIL').length, nW = all.length - nF;
+  const fis = [...new Set(all.map(i => i.fi))].sort((a, b) => ((FI_ORDER.indexOf(a) + 100) % 100) - ((FI_ORDER.indexOf(b) + 100) % 100));
+  const fiRows = fis.map(f => ({ name: f, fail: all.filter(i => i.fi === f && i.status === 'FAIL').length, warn: all.filter(i => i.fi === f && i.status === 'WARN').length,
+    users: new Set(all.filter(i => i.fi === f && i.status === 'FAIL').flatMap(i => [...i.users])).size })).sort((a, b) => b.fail - a.fail || b.warn - a.warn);
+  const clRows = [...A.clients.entries()].filter(([, c]) => c.tested).map(([id, c]) => ({ id, name: c.name, tested: c.tested, fail: c.fails.size, warn: c.warns.size })).sort((a, b) => b.fail - a.fail || b.warn - a.warn);
+  const maxFi = Math.max(1, ...fiRows.map(r => r.fail + r.warn)), maxCl = Math.max(1, ...clRows.map(r => r.fail + r.warn));
+  const bar = (fail, warn, max) => `<div class="trk" style="display:flex"><div class="fil" style="width:${(fail / max * 100).toFixed(1)}%"></div><div class="fil w" style="width:${(warn / max * 100).toFixed(1)}%"></div></div>`;
+  const chip = (lbl, on, act, n) => `<button class="chip ${on ? 'on' : ''}" onclick="${act}">${lbl}${n != null ? `<span>${n}</span>` : ''}</button>`;
+  const clientOpts = clRows.map(r => `<option value="${escAttr(r.id)}" ${_an.client === r.id ? 'selected' : ''}>${esc(r.name)} (${r.tested})</option>`).join('');
+  const rows = shown.map((it, i) => {
+    const open = !!_an.open[it.key];
+    const cls = [...it.clients.values()].sort((a, b) => b.users.size - a.users.size);
+    const cl = cls.slice(0, 5).map(c => `<span title="${escAttr(c.name)}: ${c.users.size} user${c.users.size !== 1 ? 's' : ''}">${esc(c.name)} ×${c.users.size}</span>`).join('')
+      + (cls.length > 5 ? `<span title="${escAttr(cls.slice(5).map(c => `${c.name} ×${c.users.size}`).join(', '))}">+${cls.length - 5} more</span>` : '');
+    let openHtml = '';
+    if (open) {
+      const ex = explainFailure(it.examples[0].check);
+      openHtml = `<div class="an-open">
+        <div class="dp-body">
+          <div class="dp-sec"><div class="dp-lbl">What is wrong</div><div class="dp-val">${ex.what}</div></div>
+          <div class="dp-sec"><div class="dp-lbl">Why this happens</div><div class="dp-val">${ex.why}</div></div>
+          <div class="dp-sec"><div class="dp-lbl">User impact</div><div class="dp-val">${ex.impact}</div></div>
+          <div class="dp-sec"><div class="dp-lbl">Suggested action</div><div class="dp-val">${ex.action}</div></div>
+          ${it.tol ? `<div class="dp-sec"><div class="dp-lbl">Tolerance</div><div class="dp-val">${esc(it.tol)}</div></div>` : ''}
+        </div>
+        <div class="ex-ttl">Where it was seen · ${it.nu} user${it.nu !== 1 ? 's' : ''} on ${it.nc} client${it.nc !== 1 ? 's' : ''} · ${it.phase}</div>
+        ${it.examples.map(e => `<div class="ex"><div><b>${esc(e.client)}</b> · ${esc(e.user)}<br><span class="pill ${e.status === 'FAIL' ? 'f' : 'w'}">${e.status}</span></div><div class="d">${esc(e.details) || '—'}</div></div>`).join('')}
+        ${it.nu > it.examples.length ? `<div class="ex" style="color:var(--gray-400)"><div></div><div>…and ${it.nu - it.examples.length} more user${it.nu - it.examples.length !== 1 ? 's' : ''}; open each client to see them all.</div></div>` : ''}
+      </div>`;
+    }
+    return `<div class="an-row" onclick="anToggle('${escAttr(it.key)}')">
+      <span class="rk">${i + 1}</span>
+      <span><span class="pri ${it.pri}">${it.pri}</span></span>
+      <span class="iss"><div class="id">${esc(it.id)}${it.rel ? '<span class="tag rel">New in release</span>' : ''}${it.neg ? '<span class="tag neg">Negative test</span>' : ''}</div><div class="ds">${esc(it.desc)}</div></span>
+      <span class="fi">${esc(it.fi)}<br><span class="pill ${it.status === 'FAIL' ? 'f' : 'w'}">${it.status}</span></span>
+      <span class="ub"><span class="t"><b>${it.nu}</b> of ${A.nTested} users · ${Math.round(it.share * 100)}%</span>${bar(it.status === 'FAIL' ? it.nu : 0, it.status === 'FAIL' ? 0 : it.nu, A.nTested)}</span>
+      <span class="cl">${cl}</span>
+      <span class="oc" title="check results with this issue">${it.occ}</span>
+      <span class="car">${open ? '▾' : '▸'}</span>
+    </div>${openHtml}`;
+  }).join('');
+  main.innerHTML = `<div class="an-wrap">
+    <div class="an-head">
+      <div><h2>Issue analysis</h2><div class="sub">Every failing or warning check across the <b>${A.nTested}</b> users tested on <b>${A.nClients}</b> clients (${esc(_an.note)}${A.at ? `, latest ${formatDate(A.at).replace(' IST', '')}` : ''}). One row per distinct issue; rank it by how many users and clients it touches.</div></div>
+      <div style="display:flex;gap:8px"><button class="tool-btn" onclick="anCopy(this)">Copy as table</button><button class="tool-btn" onclick="anBack()">← Clients</button></div>
+    </div>
+    <div class="an-tiles">
+      <div class="an-tile"><div class="v">${A.nTested}</div><div class="l">Users tested</div><div class="s">${A.nClients} clients</div></div>
+      <div class="an-tile"><div class="v f">${nF}</div><div class="l">Distinct failures</div><div class="s">${all.filter(i => i.pri === 'P1').length} are P1</div></div>
+      <div class="an-tile"><div class="v w">${nW}</div><div class="l">Distinct warnings</div><div class="s">indicative or data-quality</div></div>
+      <div class="an-tile"><div class="v m">${A.unknown.length + A.login.length}</div><div class="l">Could not test</div><div class="s">${A.unknown.length} unknown ids · ${A.login.length} login failures</div></div>
+    </div>
+    <div class="an-panels">
+      <div class="an-panel"><div class="ttl">Issues by FI type <small>distinct failures · warnings</small></div>${fiRows.map(r => `<div class="an-bar" onclick="_an.fi=_an.fi==='${escAttr(r.name)}'?'ALL':'${escAttr(r.name)}';renderAnalysis()" title="${r.users} users affected by its failures"><span class="nm">${esc(r.name)}</span>${bar(r.fail, r.warn, maxFi)}<span class="n">${r.fail}·${r.warn}</span></div>`).join('')}</div>
+      <div class="an-panel"><div class="ttl">Issues by client <small>distinct failures · warnings</small></div>${clRows.map(r => `<div class="an-bar" onclick="_an.client=_an.client==='${escAttr(r.id)}'?'ALL':'${escAttr(r.id)}';renderAnalysis()" title="${r.tested} users tested"><span class="nm">${esc(r.name)} <small style="color:var(--gray-400)">${r.tested}u</small></span>${bar(r.fail, r.warn, maxCl)}<span class="n">${r.fail}·${r.warn}</span></div>`).join('')}</div>
+    </div>
+    <div class="an-tools">
+      ${chip('All', _an.status === 'ALL', "_an.status='ALL';renderAnalysis()", all.length)}${chip('Failures', _an.status === 'FAIL', "_an.status='FAIL';renderAnalysis()", nF)}${chip('Warnings', _an.status === 'WARN', "_an.status='WARN';renderAnalysis()", nW)}
+      <span class="sep"></span>
+      <select onchange="_an.fi=this.value;renderAnalysis()"><option value="ALL">All FI types</option>${fis.map(f => `<option value="${escAttr(f)}" ${_an.fi === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>
+      <select onchange="_an.client=this.value;renderAnalysis()"><option value="ALL">All clients</option>${clientOpts}</select>
+      <button class="tool-btn ${_an.rel ? 'on' : ''}" onclick="_an.rel=!_an.rel;renderAnalysis()">New in release</button>
+      <span class="sep"></span>
+      <select onchange="_an.sort=this.value;renderAnalysis()">${[['priority', 'Sort: priority'], ['users', 'Sort: users affected'], ['clients', 'Sort: clients affected'], ['occurrences', 'Sort: occurrences'], ['fi', 'Sort: FI type'], ['check', 'Sort: check id']].map(([v, l]) => `<option value="${v}" ${_an.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <input class="search" placeholder="Search issues…" value="${esc(_an.q)}" oninput="_an.q=this.value;renderAnalysis()">
+    </div>
+    <div class="an-table">
+      <div class="an-row hd"><span>#</span><span>Priority</span><span>Issue</span><span>FI type · status</span><span>Users affected</span><span>Clients</span><span style="text-align:right">Occurr.</span><span></span></div>
+      ${rows || '<div class="an-empty">No issues match these filters.</div>'}
+    </div>
+    <div class="hint">P1 = failing on 3+ clients, 10+ users or half the users tested · P2 = any other failure, or a warning on 3+ clients · P3 = the rest. "Occurrences" counts check results (a check can fire more than once per user). Users that could not be tested (unknown id, login failure) are left out of the denominators.</div>
+  </div>`;
+}
+
+function anToggle(key) { _an.open[key] = !_an.open[key]; renderAnalysis(); }
+
+function anCopy(btn) {
+  const A = _an.data; if (!A) return;
+  const rows = anSorted(anFiltered(A.list));
+  const head = ['Rank', 'Priority', 'Status', 'Check', 'Issue', 'FI type', 'Phase', 'Users affected', 'Users tested', 'Clients affected', 'Clients', 'Occurrences', 'Example'];
+  const tsv = [head.join('\t')].concat(rows.map((it, i) => [i + 1, it.pri, it.status, it.id, it.desc, it.fi, it.phase, it.nu, A.nTested, it.nc,
+    [...it.clients.values()].map(c => `${c.name} ×${c.users.size}`).join('; '), it.occ, (it.examples[0] || {}).details || ''].map(v => String(v).replace(/[\t\n]+/g, ' ')).join('\t'))).join('\n');
+  navigator.clipboard.writeText(tsv).then(() => { const t = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(() => btn.textContent = t, 1500); showToast(`${rows.length} issues copied — paste into a sheet`); }).catch(() => showToast('Could not copy', 'error'));
 }
 
 // ── Run modal: clients, options, progress ──────────────────────
