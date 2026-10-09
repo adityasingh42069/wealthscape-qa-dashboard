@@ -450,6 +450,34 @@ textarea.txt-input { resize:vertical; min-height:58px; font-family:'SF Mono','Fi
 .an-open .ex b { color:var(--gray-900); font-weight:600; }
 .an-open .ex .d { font-family:'SF Mono','Fira Code',monospace; font-size:11px; word-break:break-word; }
 .an-empty { padding:28px; text-align:center; color:var(--gray-500); font-size:13px; }
+.tag.ep { color:#175CD3; background:#EFF8FF; }
+.tag.attr { color:var(--gray-700); background:var(--gray-100); font-family:'SF Mono','Fira Code',monospace; }
+.an-views { display:flex; gap:6px; }
+.at-ep { background:var(--white); border:1px solid var(--gray-200); border-radius:10px; overflow:hidden; }
+.at-ep + .at-ep { margin-top:10px; }
+.at-eph { display:grid; grid-template-columns:minmax(260px,1fr) 160px 170px 24px; gap:12px; align-items:center; padding:11px 14px; background:var(--gray-50); cursor:pointer; }
+.at-eph .p { font-family:'SF Mono','Fira Code',monospace; font-size:12.5px; font-weight:700; color:var(--gray-900); }
+.at-eph .s { font-size:11.5px; color:var(--gray-500); margin-top:2px; }
+.at-eph .k { font-size:11.5px; color:var(--gray-700); }
+.at-row { display:grid; grid-template-columns:52px minmax(240px,1fr) 70px 190px 180px 54px 24px; gap:10px; align-items:center; padding:8px 14px; border-top:1px solid var(--gray-100); font-size:12.5px; cursor:pointer; }
+.at-row:hover { background:var(--gray-50); }
+.at-row.hd { cursor:default; background:var(--white); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--gray-500); }
+.at-row .rw { font-variant-numeric:tabular-nums; color:var(--gray-500); font-size:11px; }
+.at-row .ap { font-family:'SF Mono','Fira Code',monospace; font-size:11.5px; color:var(--gray-900); word-break:break-all; }
+.at-row .ac { font-size:11px; color:var(--gray-500); margin-top:2px; }
+.at-row .fx { display:inline-block; font-size:10px; font-weight:700; color:#6941C6; background:var(--purple-light); border-radius:4px; padding:0 5px; margin-left:6px; }
+.at-row .cl span { font-size:10.5px; font-weight:600; background:var(--gray-100); color:var(--gray-700); border-radius:4px; padding:1px 6px; white-space:nowrap; margin:0 3px 3px 0; display:inline-block; }
+.at-open { padding:10px 14px 14px 76px; border-top:1px dashed var(--gray-200); background:var(--gray-50); font-size:12px; }
+.at-open .sheet { background:var(--white); border:1px solid var(--gray-200); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+.at-open .sheet .lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--gray-400); margin:6px 0 2px; }
+.at-open .sheet .lbl:first-child { margin-top:0; }
+.at-open .sheet .val { color:var(--gray-700); white-space:pre-wrap; line-height:1.45; }
+.at-open .sheet .val.fix { color:#6941C6; }
+.at-chk { background:var(--white); border:1px solid var(--gray-200); border-radius:8px; padding:8px 10px; margin-bottom:8px; }
+.at-chk .h { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-weight:600; color:var(--gray-900); }
+.at-chk .ex { display:grid; grid-template-columns:170px 1fr; gap:8px; padding:4px 0; border-top:1px solid var(--gray-100); margin-top:4px; color:var(--gray-700); }
+.at-chk .ex .d { font-family:'SF Mono','Fira Code',monospace; font-size:11px; word-break:break-word; }
+@media (max-width: 1100px) { .at-row { grid-template-columns:44px minmax(180px,1fr) 64px 150px 20px; } .at-row .cl, .at-row .oc { display:none; } .at-eph { grid-template-columns:1fr 24px; } .at-eph .k { display:none; } .at-open { padding-left:14px; } }
 @media (max-width: 1100px) { .an-row { grid-template-columns:30px 44px minmax(200px,1fr) 150px 60px 20px; } .an-row .fi, .an-row .cl { display:none; } .an-open { padding-left:14px; } }
 </style>
 </head>
@@ -616,6 +644,18 @@ function explainExtended(check, D) {
   const id = check.check_id || '', desc = check.description || '';
   const is5xx = /got 5\d\d|Status: 5\d\d|HTTP 5\d\d/.test(D.exact);
   const E = (what, why, impact, action, exact) => ({ what, exact: exact || D.exact, why, impact, action });
+
+  // ---- MF attribute sheet checks (MFA-<row>): the sheet's own words, served by the local runner
+  if (/^MFA-\d+$/.test(id)) {
+    const e = (_mfaCat || {})[check.sheet_row || parseInt(id.slice(4), 10)];
+    const where = `${esc(check.endpoint || '')} · ${esc(check.attribute || '')}`;
+    if (!e) return E(`${esc(desc)} (${where}).`, `See row ${check.sheet_row || id.slice(4)} of the MF attribute sheet for how this attribute is built.`,
+      `The attribute shown by this API does not meet the assertion in the sheet.`, `Open the sheet row; start the local runner to see the sheet's text here.`);
+    return E(`Sheet row ${e.row} — ${esc(e.check)}`,
+      `<b>Source</b>: ${esc(e.source || '—')}${e.definition ? `<br><b>Logic</b>: ${esc(e.definition)}` : ''}${e.config && e.config !== '-' ? `<br><b>Configuration</b>: ${esc(e.config)}` : ''}`,
+      `${where} as returned to the app does not meet the sheet's assertion${e.when_off && e.when_off !== '-' ? ` (when off / empty: ${esc(e.when_off)})` : ''}.`,
+      e.fixes ? `<b>Fix noted in the sheet</b>: ${esc(e.fixes)}` : `Compare the response with row ${e.row} of the sheet and trace the source fields above.`);
+  }
 
   // ---- next release: security probes
   if (id === 'BR-FNO-SEC-01')
@@ -1336,7 +1376,8 @@ function renderGroups() {
     const all = _checks.filter(x => (_view.group === 'fi' ? x._fi : x._phase) === g.name && (!_view.rel || x._rel));
     const open = g.name in _openGroups ? _openGroups[g.name] : defaultOpen;
     const rows = g.checks.slice().sort((a, b) => (SEV[a.status] ?? 2) - (SEV[b.status] ?? 2)).map(x => {
-      const tags = `<span class="tag">${esc(_view.group === 'fi' ? x._phase : x._fi)}</span>${x._rel ? '<span class="tag rel">New in release</span>' : ''}${x._neg ? '<span class="tag neg">Negative test</span>' : ''}`;
+      const tags = `<span class="tag">${esc(_view.group === 'fi' ? x._phase : x._fi)}</span>${x._rel ? '<span class="tag rel">New in release</span>' : ''}${x._neg ? '<span class="tag neg">Negative test</span>' : ''}`
+        + (x.endpoint ? `<span class="tag ep">${esc(x.endpoint)}</span><span class="tag attr">${esc(x.attribute || '')}</span>${x.sheet_row ? `<span class="tag">Sheet row ${x.sheet_row}</span>` : ''}` : '');
       return renderCheck(x, c.name, c.environment, tags);
     }).join('');
     return `<div class="grp ${open ? 'open' : ''}" id="${gid(g.name)}">
@@ -1448,6 +1489,7 @@ function emptyState(msg) {
 
 async function showReport(data) {
   _report = (data && data.clients) ? data : { clients: [] };
+  loadMfaCatalog();
   if (!_report.clients.length) document.getElementById('last-updated').textContent = 'No runs yet';
   if (_runnerUp) { try { _clients = (await rfetch('/api/clients')).clients || []; } catch (_) {} }
   if (!_report.clients.length && !(_runnerUp && _clients.length)) {
@@ -1480,7 +1522,190 @@ async function loadReport(){
 // ── Issue analysis: every FAIL / WARN across the latest result of every client, ranked ──
 // Priority: P1 = failing on 3+ clients, 10+ users or half the users tested; P2 = any other failure, or a
 // warning on 3+ clients; P3 = the rest.
-const _an = { data: null, status: 'ALL', fi: 'ALL', client: 'ALL', rel: false, q: '', sort: 'priority', open: {}, note: '' };
+const _an = { data: null, docs: [], view: 'issue', status: 'ALL', fi: 'ALL', client: 'ALL', rel: false, q: '', sort: 'priority', open: {}, note: '' };
+const _at = { data: null, ep: 'ALL', status: 'FAIL', q: '', sort: 'users', open: {}, closed: {} };
+let _mfaCat = null;   // MF attribute sheet rows by row number (from the local runner; internal, never published)
+const AT_EP_ORDER = ['/mutual-fund/insights', '/mutual-fund/user-linked-accounts/holding-folio', '/mutual-fund/holdings/isins/{isin}/insights', '/mutual-fund/time-series',
+  '/mutual-fund/sip-insights', '/mutual-fund/performance-vs-benchmark', '/mutual-fund/user-account-statement', '/mutual-fund/capital-gains', '/mutual-fund/user-linked-accounts'];
+
+async function loadMfaCatalog() {
+  if (_mfaCat || !_runnerUp) return _mfaCat;
+  try { const c = await rfetch('/api/mf-attributes'); const m = {}; for (const e of c.rows || []) m[e.row] = e; _mfaCat = m; } catch (_) {}
+  return _mfaCat;
+}
+
+function atAggregate(docs) {
+  const attrs = new Map(), clients = new Set();
+  let tested = 0;
+  for (const d of docs) {
+    const cid = d.client_id || d.name;
+    for (const u of d.users || []) {
+      const phases = u.phases || [];
+      const bad = id => phases.some(p => (p.checks || []).some(c => c.check_id === id && c.status === 'FAIL'));
+      if (bad('BR-AUTH-00') || bad('BR-USER-00')) continue;
+      tested++;
+      const uid = `${cid}|${u.user || u.name || ''}`, label = u.user || '';
+      for (const p of phases) for (const c of p.checks || []) {
+        if (!c.endpoint || !c.attribute) continue;
+        const ep = c.endpoint.replace(/^POST\s+/, '');
+        const key = ep + '§' + c.attribute;
+        if (!attrs.has(key)) attrs.set(key, { key, ep, attr: c.attribute, row: c.sheet_row, tested: new Set(), fail: new Set(), warn: new Set(), skip: new Set(), clients: new Map(), checks: new Map(), occ: 0, skipWhy: new Map() });
+        const a = attrs.get(key);
+        if (c.status !== 'PASS' && c.status !== 'FAIL' && c.status !== 'WARN') { a.skip.add(uid); const w = (c.details || '').split(' | ')[0]; a.skipWhy.set(w, (a.skipWhy.get(w) || 0) + 1); continue; }
+        a.tested.add(uid);
+        if (!a.checks.has(c.description)) a.checks.set(c.description, { desc: c.description, id: c.check_id, fail: new Set(), warn: new Set(), pass: new Set(), examples: [], tol: c.tolerance || '' });
+        const k = a.checks.get(c.description);
+        if (c.status === 'PASS') { k.pass.add(uid); continue; }
+        a.occ++;
+        (c.status === 'FAIL' ? a.fail : a.warn).add(uid);
+        (c.status === 'FAIL' ? k.fail : k.warn).add(uid);
+        clients.add(cid);
+        if (!a.clients.has(cid)) a.clients.set(cid, { name: d.name, users: new Set() });
+        a.clients.get(cid).users.add(uid);
+        if (k.examples.length < 6 && !k.examples.some(x => x.client === d.name && x.user === label)) k.examples.push({ client: d.name, user: label, status: c.status, details: c.details || '' });
+      }
+    }
+  }
+  for (const a of attrs.values()) {
+    a.warnOnly = new Set([...a.warn].filter(x => !a.fail.has(x)));
+    a.status = a.fail.size ? 'FAIL' : a.warnOnly.size ? 'WARN' : a.tested.size ? 'PASS' : 'SKIP';
+  }
+  return { attrs, tested };
+}
+
+function atRows() {
+  // every attribute with a result; with the sheet loaded, also the sheet's attributes that have no check or never ran
+  const A = _at.data, rows = [...A.attrs.values()];
+  if (_mfaCat && _at.status === 'SHEET') {
+    const have = new Set(rows.map(a => a.key));
+    for (const e of Object.values(_mfaCat)) {
+      const key = e.endpoint_key + '§' + e.attribute;
+      if (have.has(key)) continue;
+      rows.push({ key, ep: e.endpoint_key, attr: e.attribute, row: e.row, tested: new Set(), fail: new Set(), warn: new Set(), warnOnly: new Set(), skip: new Set(),
+        clients: new Map(), checks: new Map(), occ: 0, skipWhy: new Map(), status: e.has_check ? 'SKIP' : 'NONE' });
+    }
+  }
+  const q = _at.q.toLowerCase();
+  return rows.filter(a => (_at.ep === 'ALL' || a.ep === _at.ep)
+    && (_at.status === 'SHEET' || _at.status === 'ALL' ? true : _at.status === 'FAIL' ? a.status === 'FAIL' : _at.status === 'WARN' ? a.status === 'WARN' : a.status === _at.status)
+    && (!q || `${a.ep} ${a.attr} ${a.row} ${[...a.checks.keys()].join(' ')}`.toLowerCase().includes(q)));
+}
+
+function atSort(rows) {
+  const S = { FAIL: 0, WARN: 1, PASS: 2, SKIP: 3, NONE: 4 };
+  const by = {
+    users: (a, b) => S[a.status] - S[b.status] || b.fail.size - a.fail.size || b.warnOnly.size - a.warnOnly.size || b.clients.size - a.clients.size || (a.row || 0) - (b.row || 0),
+    clients: (a, b) => S[a.status] - S[b.status] || b.clients.size - a.clients.size || b.fail.size - a.fail.size,
+    sheet: (a, b) => (a.row || 0) - (b.row || 0),
+    share: (a, b) => S[a.status] - S[b.status] || (b.fail.size / Math.max(1, b.tested.size)) - (a.fail.size / Math.max(1, a.tested.size)),
+  };
+  return rows.slice().sort(by[_at.sort] || by.users);
+}
+
+function renderAttrView() {
+  const main = document.getElementById('main-content');
+  const A = _at.data;
+  const all = [...A.attrs.values()];
+  const head = anHead('Issue analysis · by attribute and endpoint',
+    `Every MF attribute check from the attribute sheet across the <b>${A.tested}</b> users tested (${esc(_an.note)}). One row per attribute of an API; an attribute fails for a user when any of its sheet assertions fails.`,
+    `<button class="tool-btn" onclick="atCopy(this)">Copy as table</button>`);
+  if (!all.length) {
+    main.innerHTML = `<div class="an-wrap">${head}<div class="none-card">No MF attribute results yet. Run the checks again (the attribute phases 29-37 are new) and come back here.</div></div>`;
+    return;
+  }
+  const failing = all.filter(a => a.status === 'FAIL'), warning = all.filter(a => a.status === 'WARN');
+  const affected = new Set(failing.flatMap(a => [...a.fail]));
+  const sheetChecks = _mfaCat ? Object.values(_mfaCat).filter(e => e.has_check).length : null;
+  const ran = all.filter(a => a.tested.size).length;
+  const epNames = [...new Set(all.map(a => a.ep))].sort((a, b) => ((AT_EP_ORDER.indexOf(a) + 99) % 99) - ((AT_EP_ORDER.indexOf(b) + 99) % 99));
+  const epStats = epNames.map(ep => {
+    const xs = all.filter(a => a.ep === ep);
+    return { ep, attrs: xs.filter(a => a.tested.size).length, fail: xs.filter(a => a.status === 'FAIL').length, warn: xs.filter(a => a.status === 'WARN').length,
+      users: new Set(xs.filter(a => a.status === 'FAIL').flatMap(a => [...a.fail])).size };
+  });
+  const maxEp = Math.max(1, ...epStats.map(e => e.fail + e.warn));
+  const bar = (fail, warn, max) => `<div class="trk" style="display:flex"><div class="fil" style="width:${(fail / max * 100).toFixed(1)}%"></div><div class="fil w" style="width:${(warn / max * 100).toFixed(1)}%"></div></div>`;
+  const chip = (lbl, val, n) => `<button class="chip ${_at.status === val ? 'on' : ''}" onclick="_at.status='${val}';renderAnalysis()">${lbl}${n != null ? `<span>${n}</span>` : ''}</button>`;
+  const rows = atSort(atRows());
+  const groups = new Map();
+  for (const a of rows) { if (!groups.has(a.ep)) groups.set(a.ep, []); groups.get(a.ep).push(a); }
+  const order = [...groups.keys()].sort((a, b) => ((AT_EP_ORDER.indexOf(a) + 99) % 99) - ((AT_EP_ORDER.indexOf(b) + 99) % 99));
+  const sections = order.map(ep => {
+    const xs = groups.get(ep), st = epStats.find(e => e.ep === ep) || { attrs: 0, fail: 0, warn: 0, users: 0 };
+    const closed = !!_at.closed[ep];
+    const body = closed ? '' : `<div class="at-row hd"><span>Row</span><span>Attribute</span><span>Status</span><span>Users failing</span><span>Clients</span><span style="text-align:right">Occ.</span><span></span></div>` + xs.map(a => {
+      const open = !!_at.open[a.key];
+      const e = _mfaCat ? _mfaCat[a.row] : null;
+      const n = a.tested.size, f = a.fail.size, w = a.warnOnly.size;
+      const cls = [...a.clients.values()].sort((x, y) => y.users.size - x.users.size);
+      const cl = cls.slice(0, 4).map(c => `<span title="${escAttr(c.name)}: ${c.users.size} user${c.users.size !== 1 ? 's' : ''}">${esc(c.name)} ×${c.users.size}</span>`).join('') + (cls.length > 4 ? `<span>+${cls.length - 4}</span>` : '');
+      const pill = { FAIL: '<span class="pill f">FAIL</span>', WARN: '<span class="pill w">WARN</span>', PASS: '<span class="pill p">PASS</span>', SKIP: '<span class="pill u">Not run</span>', NONE: '<span class="pill u">No check</span>' }[a.status];
+      const users = n ? `<span class="ub"><span class="t"><b>${f}</b>${w ? ` (+${w} warn)` : ''} of ${n} users</span>${bar(f, w, n)}</span>` : `<span class="ub"><span class="t" style="color:var(--gray-400)">${a.status === 'NONE' ? 'no assertion in the sheet' : `not run${a.skip.size ? ` for ${a.skip.size}` : ''}`}</span></span>`;
+      let openHtml = '';
+      if (open) {
+        const sheet = e ? `<div class="sheet"><div class="lbl">Check to assert (sheet row ${e.row})</div><div class="val">${esc(e.check || '—')}</div>
+          <div class="lbl">Source field(s) / formula inputs</div><div class="val">${esc(e.source || '—')}</div>
+          ${e.fixes ? `<div class="lbl">Fixes</div><div class="val fix">${esc(e.fixes)}</div>` : ''}</div>` : `<div class="sheet"><div class="val">Sheet row ${a.row || '—'}. Start the local runner to see the sheet's text here.</div></div>`;
+        const checks = [...a.checks.values()].sort((x, y) => y.fail.size - x.fail.size || y.warn.size - x.warn.size).map(k => `<div class="at-chk">
+            <div class="h">${esc(k.desc.split(' · ').slice(1).join(' · ') || k.desc)} <span class="pill f">${k.fail.size} fail</span>${k.warn.size ? `<span class="pill w">${k.warn.size} warn</span>` : ''}<span class="pill p">${k.pass.size} pass</span>${k.tol ? `<span class="tag">Tolerance: ${esc(k.tol)}</span>` : ''}</div>
+            ${k.examples.map(x => `<div class="ex"><div><b>${esc(x.client)}</b> · ${esc(x.user)} <span class="pill ${x.status === 'FAIL' ? 'f' : 'w'}">${x.status}</span></div><div class="d">${esc(x.details) || '—'}</div></div>`).join('')}
+          </div>`).join('');
+        const skips = a.skip.size ? `<div class="ac">Not run for ${a.skip.size} user${a.skip.size !== 1 ? 's' : ''}: ${[...a.skipWhy.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([wy, c]) => `${esc(wy)} (${c})`).join(' · ')}</div>` : '';
+        openHtml = `<div class="at-open">${sheet}${checks}${skips}</div>`;
+      }
+      return `<div class="at-row" onclick="_at.open['${escAttr(a.key)}']=!_at.open['${escAttr(a.key)}'];renderAnalysis()">
+        <span class="rw">${a.row ? '#' + a.row : ''}</span>
+        <span><div class="ap">${esc(a.attr)}${e && e.fixes ? '<span class="fx" title="The sheet notes a fix for this attribute">FIX</span>' : ''}</div><div class="ac">${a.checks.size ? `${a.checks.size} assertion${a.checks.size !== 1 ? 's' : ''}` : ''}</div></span>
+        <span>${pill}</span>${users}<span class="cl">${cl}</span><span class="oc" style="text-align:right">${a.occ || ''}</span><span class="car">${open ? '▾' : '▸'}</span>
+      </div>${openHtml}`;
+    }).join('');
+    return `<div class="at-ep"><div class="at-eph" onclick="_at.closed['${escAttr(ep)}']=!_at.closed['${escAttr(ep)}'];renderAnalysis()">
+        <span><div class="p">POST ${esc(ep)}</div><div class="s">${st.attrs} attributes checked · <b style="color:var(--red)">${st.fail} failing</b> · <b style="color:var(--amber)">${st.warn} warning</b> · ${st.users} users affected</div></span>
+        <span class="k">${xs.length} shown</span><span class="ub">${bar(st.fail, st.warn, Math.max(1, st.attrs))}</span><span class="car">${closed ? '▸' : '▾'}</span></div>${body}</div>`;
+  }).join('');
+  main.innerHTML = `<div class="an-wrap">
+    ${head}
+    <div class="an-tiles">
+      <div class="an-tile"><div class="v">${A.tested}</div><div class="l">Users tested</div><div class="s">${epNames.length} MF endpoints</div></div>
+      <div class="an-tile"><div class="v">${ran}</div><div class="l">Attributes checked</div><div class="s">${sheetChecks != null ? `${sheetChecks} sheet rows carry a check` : 'with at least one result'}</div></div>
+      <div class="an-tile"><div class="v f">${failing.length}</div><div class="l">Attributes failing</div><div class="s">${affected.size} users affected</div></div>
+      <div class="an-tile"><div class="v w">${warning.length}</div><div class="l">Attributes with warnings only</div><div class="s">indicative or data-quality</div></div>
+    </div>
+    <div class="an-panels">
+      <div class="an-panel" style="grid-column:1/-1"><div class="ttl">Failing attributes by endpoint <small>failing · warning attributes</small></div>${epStats.map(e => `<div class="an-bar" style="grid-template-columns:330px 1fr 52px" onclick="_at.ep=_at.ep==='${escAttr(e.ep)}'?'ALL':'${escAttr(e.ep)}';renderAnalysis()" title="${e.users} users affected · ${e.attrs} attributes checked"><span class="nm" style="font-family:'SF Mono','Fira Code',monospace;font-size:11.5px">${esc(e.ep)}</span>${bar(e.fail, e.warn, maxEp)}<span class="n">${e.fail}·${e.warn}</span></div>`).join('')}</div>
+    </div>
+    <div class="an-tools">
+      ${chip('Failing', 'FAIL', failing.length)}${chip('Warnings', 'WARN', warning.length)}${chip('All checked', 'ALL', all.length)}${_mfaCat ? chip('Whole sheet', 'SHEET', Object.keys(_mfaCat).length) : ''}
+      <span class="sep"></span>
+      <select onchange="_at.ep=this.value;renderAnalysis()"><option value="ALL">All endpoints</option>${epNames.map(ep => `<option value="${escAttr(ep)}" ${_at.ep === ep ? 'selected' : ''}>${esc(ep)}</option>`).join('')}</select>
+      <select onchange="_at.sort=this.value;renderAnalysis()">${[['users', 'Sort: users failing'], ['share', 'Sort: share of users failing'], ['clients', 'Sort: clients'], ['sheet', 'Sort: sheet order']].map(([v, l]) => `<option value="${v}" ${_at.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <input class="search" id="an-search" placeholder="Search attributes…" value="${esc(_at.q)}" oninput="_at.q=this.value;renderAnalysis(true)">
+    </div>
+    ${sections || '<div class="none-card">No attributes match these filters.</div>'}
+    <div class="hint">An attribute counts as failing for a user when any of its sheet assertions fails; "+n warn" are users with warnings only. "Not run" means the endpoint had no data for those users or the assertion did not apply. FIX marks attributes for which the sheet records a fix.</div>
+  </div>`;
+}
+
+function atCopy(btn) {
+  const rows = atSort(atRows());
+  const head = ['Endpoint', 'Attribute', 'Sheet row', 'Status', 'Users failing', 'Users with warnings only', 'Users tested', 'Clients', 'Assertions', 'Example', 'Fixes in the sheet'];
+  const tsv = [head.join('\t')].concat(rows.map(a => {
+    const k = [...a.checks.values()].find(x => x.fail.size || x.warn.size);
+    const e = _mfaCat ? _mfaCat[a.row] : null;
+    return ['POST ' + a.ep, a.attr, a.row || '', a.status, a.fail.size, a.warnOnly.size, a.tested.size, [...a.clients.values()].map(c => `${c.name} ×${c.users.size}`).join('; '),
+      a.checks.size, k && k.examples[0] ? k.examples[0].details : '', e ? e.fixes || '' : ''].map(v => String(v).replace(/[\t\n]+/g, ' ')).join('\t');
+  })).join('\n');
+  navigator.clipboard.writeText(tsv).then(() => { const t = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(() => btn.textContent = t, 1500); showToast(`${rows.length} attributes copied — paste into a sheet`); }).catch(() => showToast('Could not copy', 'error'));
+}
+
+function anHead(title, sub, extra) {
+  return `<div class="an-head">
+      <div><h2>${title}</h2><div class="sub">${sub}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="an-views">${[['issue', 'By issue'], ['attr', 'By attribute + endpoint']].map(([v, l]) => `<button class="chip ${_an.view === v ? 'on' : ''}" onclick="_an.view='${v}';renderAnalysis()">${l}</button>`).join('')}</div>
+        ${extra || ''}<button class="tool-btn" onclick="anBack()">← Clients</button></div>
+    </div>`;
+}
 
 function anDocsFromReport() {   // hosted page without the runner: group the published report by client
   const by = new Map();
@@ -1557,7 +1782,10 @@ async function showAnalysis() {
     if (_runnerUp) { docs = (await rfetch('/api/results')).clients || []; _an.note = 'latest result stored per client by the local runner'; }
   } catch (_) { docs = []; }
   if (!docs.length) { docs = anDocsFromReport(); _an.note = _runnerUp ? 'from the latest run report' : 'from the published report (start the local runner to include every client you have run)'; }
+  await loadMfaCatalog();
+  _an.docs = docs;
   _an.data = anAggregate(docs);
+  _at.data = atAggregate(docs);
   renderAnalysis();
 }
 
@@ -1566,7 +1794,13 @@ function anBack() {
   showReport(_report);
 }
 
-function renderAnalysis() {
+function renderAnalysis(keepFocus) {
+  const pos = keepFocus && document.activeElement && document.activeElement.id === 'an-search' ? document.activeElement.selectionStart : null;
+  if (_an.view === 'attr' && _at.data) renderAttrView(); else renderIssueView();
+  if (pos != null) { const el = document.getElementById('an-search'); if (el) { el.focus(); el.setSelectionRange(pos, pos); } }
+}
+
+function renderIssueView() {
   const A = _an.data, main = document.getElementById('main-content');
   if (!A || !A.nTested) { main.innerHTML = `<div class="an-wrap"><div class="an-head"><div><h2>Issue analysis</h2><div class="sub">No tested users yet. Run the checks for a client first.</div></div><button class="tool-btn" onclick="anBack()">← Clients</button></div></div>`; return; }
   const all = A.list, shown = anSorted(anFiltered(all));
@@ -1612,10 +1846,8 @@ function renderAnalysis() {
     </div>${openHtml}`;
   }).join('');
   main.innerHTML = `<div class="an-wrap">
-    <div class="an-head">
-      <div><h2>Issue analysis</h2><div class="sub">Every failing or warning check across the <b>${A.nTested}</b> users tested on <b>${A.nClients}</b> clients (${esc(_an.note)}${A.at ? `, latest ${formatDate(A.at).replace(' IST', '')}` : ''}). One row per distinct issue; rank it by how many users and clients it touches.</div></div>
-      <div style="display:flex;gap:8px"><button class="tool-btn" onclick="anCopy(this)">Copy as table</button><button class="tool-btn" onclick="anBack()">← Clients</button></div>
-    </div>
+    ${anHead('Issue analysis', `Every failing or warning check across the <b>${A.nTested}</b> users tested on <b>${A.nClients}</b> clients (${esc(_an.note)}${A.at ? `, latest ${formatDate(A.at).replace(' IST', '')}` : ''}). One row per distinct issue; rank it by how many users and clients it touches.`,
+      '<button class="tool-btn" onclick="anCopy(this)">Copy as table</button>')}
     <div class="an-tiles">
       <div class="an-tile"><div class="v">${A.nTested}</div><div class="l">Users tested</div><div class="s">${A.nClients} clients</div></div>
       <div class="an-tile"><div class="v f">${nF}</div><div class="l">Distinct failures</div><div class="s">${all.filter(i => i.pri === 'P1').length} are P1</div></div>
@@ -1634,7 +1866,7 @@ function renderAnalysis() {
       <button class="tool-btn ${_an.rel ? 'on' : ''}" onclick="_an.rel=!_an.rel;renderAnalysis()">New in release</button>
       <span class="sep"></span>
       <select onchange="_an.sort=this.value;renderAnalysis()">${[['priority', 'Sort: priority'], ['users', 'Sort: users affected'], ['clients', 'Sort: clients affected'], ['occurrences', 'Sort: occurrences'], ['fi', 'Sort: FI type'], ['check', 'Sort: check id']].map(([v, l]) => `<option value="${v}" ${_an.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <input class="search" placeholder="Search issues…" value="${esc(_an.q)}" oninput="_an.q=this.value;renderAnalysis()">
+      <input class="search" id="an-search" placeholder="Search issues…" value="${esc(_an.q)}" oninput="_an.q=this.value;renderAnalysis(true)">
     </div>
     <div class="an-table">
       <div class="an-row hd"><span>#</span><span>Priority</span><span>Issue</span><span>FI type · status</span><span>Users affected</span><span>Clients</span><span style="text-align:right">Occurr.</span><span></span></div>
