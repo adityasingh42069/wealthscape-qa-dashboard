@@ -450,6 +450,12 @@ textarea.txt-input { resize:vertical; min-height:58px; font-family:'SF Mono','Fi
 .an-open .ex b { color:var(--gray-900); font-weight:600; }
 .an-open .ex .d { font-family:'SF Mono','Fira Code',monospace; font-size:11px; word-break:break-word; }
 .an-empty { padding:28px; text-align:center; color:var(--gray-500); font-size:13px; }
+.rp-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 12px; background:var(--white); border:1px solid var(--gray-200); border-radius:10px; }
+.rp-bar .msg { font-size:12px; color:var(--gray-600); margin-left:auto; }
+.rp-bar .msg a { color:var(--purple); font-weight:600; text-decoration:none; margin-left:8px; }
+.rp-frame { width:100%; height:calc(100vh - 230px); min-height:520px; border:1px solid var(--gray-200); border-radius:10px; background:#fff; }
+.rp-prev { font-size:12px; color:var(--gray-600); }
+.rp-prev a { color:var(--purple); text-decoration:none; font-weight:600; }
 .tag.ep { color:#175CD3; background:#EFF8FF; }
 .tag.attr { color:var(--gray-700); background:var(--gray-100); font-family:'SF Mono','Fira Code',monospace; }
 .an-views { display:flex; gap:6px; }
@@ -1703,7 +1709,7 @@ function anHead(title, sub, extra) {
       <div><h2>${title}</h2><div class="sub">${sub}</div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <div class="an-views">${[['issue', 'By issue'], ['attr', 'By attribute + endpoint']].map(([v, l]) => `<button class="chip ${_an.view === v ? 'on' : ''}" onclick="_an.view='${v}';renderAnalysis()">${l}</button>`).join('')}</div>
-        ${extra || ''}<button class="tool-btn" onclick="anBack()">← Clients</button></div>
+        ${extra || ''}<button class="tool-btn" style="border-color:var(--purple);color:var(--purple-dark)" onclick="showReportView()">Generate report</button><button class="tool-btn" onclick="anBack()">← Clients</button></div>
     </div>`;
 }
 
@@ -1885,6 +1891,231 @@ function anCopy(btn) {
   const tsv = [head.join('\t')].concat(rows.map((it, i) => [i + 1, it.pri, it.status, it.id, it.desc, it.fi, it.phase, it.nu, A.nTested, it.nc,
     [...it.clients.values()].map(c => `${c.name} ×${c.users.size}`).join('; '), it.occ, (it.examples[0] || {}).details || ''].map(v => String(v).replace(/[\t\n]+/g, ' ')).join('\t'))).join('\n');
   navigator.clipboard.writeText(tsv).then(() => { const t = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(() => btn.textContent = t, 1500); showToast(`${rows.length} issues copied — paste into a sheet`); }).catch(() => showToast('Could not copy', 'error'));
+}
+
+// ── Report: the whole analysis as one document (A4 HTML → PDF) plus a workbook ─────────────
+// Built from the same aggregation as Issue Analysis (latest stored result of every client). The local runner
+// saves it as HTML, PDF and Excel under ~/Downloads/WealthScape QA Reports; without the runner it can be printed.
+let _rp = null;   // { model, html, sheets, saved }
+
+function rpE(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function rpCut(v, n) { const t = String(v || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; }
+function rpPct(a, b) { return b ? Math.round(a * 100 / b) : 0; }
+
+async function buildReportModel() {
+  if (!_an.data || !_an.docs.length) await showAnalysis();
+  if (_runnerUp && !_clients.length) { try { _clients = (await rfetch('/api/clients')).clients || []; } catch (_) {} }
+  await loadMfaCatalog();
+  const A = _an.data, T = _at.data || atAggregate(_an.docs), docs = _an.docs;
+  const issues = anSorted(A.list.slice());
+  const P = { P1: issues.filter(i => i.pri === 'P1'), P2: issues.filter(i => i.pri === 'P2'), P3: issues.filter(i => i.pri === 'P3') };
+  const fails = issues.filter(i => i.status === 'FAIL'), warns = issues.filter(i => i.status === 'WARN');
+  // clients and users
+  const clients = docs.map(d => {
+    const cid = d.client_id || d.name;
+    const users = (d.users || []).map(u => {
+      const phases = u.phases || [];
+      const bad = id => phases.some(p => (p.checks || []).some(c => c.check_id === id && c.status === 'FAIL'));
+      const st = bad('BR-AUTH-00') ? 'login failed' : bad('BR-USER-00') ? 'unknown id' : 'tested';
+      const all = phases.flatMap(p => p.checks || []);
+      const f = all.filter(c => c.status === 'FAIL'), w = all.filter(c => c.status === 'WARN');
+      return { user: u.user || '', state: st, run: all.filter(c => ['PASS', 'FAIL', 'WARN'].includes(c.status)).length, failed: f.length, warned: w.length,
+        passed: all.filter(c => c.status === 'PASS').length, top: [...new Set(f.map(c => c.check_id))].slice(0, 6).join(', ') };
+    });
+    const mine = issues.filter(i => i.clients.has(cid));
+    const top = mine.filter(i => i.status === 'FAIL').sort((a, b) => b.clients.get(cid).users.size - a.clients.get(cid).users.size || (a.pri < b.pri ? -1 : 1)).slice(0, 4)
+      .map(i => ({ desc: i.desc, id: i.id, users: i.clients.get(cid).users.size }));
+    return { cid, name: d.name, env: (d.environment || '').toUpperCase(), at: d.at, users, ids: users.length, tested: users.filter(u => u.state === 'tested').length,
+      unknown: users.filter(u => u.state === 'unknown id').length, login: users.filter(u => u.state === 'login failed').length,
+      failing: mine.filter(i => i.status === 'FAIL').length, warning: mine.filter(i => i.status === 'WARN').length, top };
+  }).sort((a, b) => b.failing - a.failing || b.tested - a.tested);
+  const fiRows = [...new Set(issues.map(i => i.fi))].map(f => ({ fi: f, fail: issues.filter(i => i.fi === f && i.status === 'FAIL').length,
+    warn: issues.filter(i => i.fi === f && i.status === 'WARN').length, users: new Set(issues.filter(i => i.fi === f && i.status === 'FAIL').flatMap(i => [...i.users])).size }))
+    .sort((a, b) => b.fail - a.fail || b.warn - a.warn);
+  // attributes (MF attribute sheet checks)
+  const attrs = [...T.attrs.values()].sort((a, b) => ((AT_EP_ORDER.indexOf(a.ep) + 99) % 99) - ((AT_EP_ORDER.indexOf(b.ep) + 99) % 99) || b.fail.size - a.fail.size || b.warnOnly.size - a.warnOnly.size || (a.row || 0) - (b.row || 0));
+  const eps = [...new Set(attrs.map(a => a.ep))].map(ep => { const xs = attrs.filter(a => a.ep === ep);
+    return { ep, checked: xs.filter(a => a.tested.size).length, fail: xs.filter(a => a.status === 'FAIL'), warn: xs.filter(a => a.status === 'WARN'),
+      users: new Set(xs.filter(a => a.status === 'FAIL').flatMap(a => [...a.fail])).size }; });
+  // not testable
+  const tested = new Set(docs.map(d => d.client_id || d.name));
+  const idle = (_clients || []).filter(c => !tested.has(c.id)).map(c => ({ name: c.name, env: (c.environment || '').toUpperCase(),
+    why: !(c.hasSecret || c.hasToken) ? 'no channel login' : !(c.uids || []).length ? 'no users added' : 'not run yet' }));
+  const ats = docs.map(d => d.at).filter(Boolean).sort();
+  return { A, T, issues, P, fails, warns, clients, fiRows, attrs, eps, idle, from: ats[0] || '', to: ats[ats.length - 1] || '', generated: new Date(),
+    unknown: A.unknown, login: A.login, sheetChecks: _mfaCat ? Object.values(_mfaCat).filter(e => e.has_check).length : null };
+}
+
+function reportHtml(M) {
+  const A = M.A, N = A.nTested, gen = formatDate(M.generated.toISOString());
+  const fmtAt = v => v ? formatDate(v).replace(' IST', '') : '—';
+  const usersCell = i => `<b>${i.nu}</b> / ${N} <span class="mut">(${rpPct(i.nu, N)}%)</span>`;
+  const clientsCell = i => [...i.clients.values()].sort((a, b) => b.users.size - a.users.size).slice(0, 4).map(c => `${rpE(c.name)} ×${c.users.size}`).join(', ') + (i.clients.size > 4 ? `, +${i.clients.size - 4}` : '');
+  const pri = p => `<span class="pri ${p}">${p}</span>`;
+  const st = s => `<span class="st ${s}">${s === 'FAIL' ? 'Fail' : s === 'WARN' ? 'Warn' : s}</span>`;
+  const top = M.P.P1.slice(0, 6);
+  const failingAttrs = M.attrs.filter(a => a.status === 'FAIL'), warnAttrs = M.attrs.filter(a => a.status === 'WARN');
+  const prio = M.issues.filter(i => i.pri !== 'P3').slice(0, 45);
+  const css = `@page{size:A4;margin:14mm 13mm 16mm}*{box-sizing:border-box}body{margin:0;font:9.5px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#101828}
+h1{font-size:21px;margin:0 0 4px;letter-spacing:-.2px}h2{font-size:14px;margin:18px 0 6px;color:#101828;border-bottom:2px solid #6D42FF;padding-bottom:3px;break-after:avoid}
+h3{font-size:11px;margin:12px 0 4px;color:#344054;break-after:avoid}p{margin:4px 0}.mut{color:#667085}
+.cover{background:#1D1340;color:#fff;border-radius:8px;padding:18px 20px;margin-bottom:10px}.cover .k{color:#C4B5FD;font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+.cover p{color:#E4E0FF}.meta{display:flex;flex-wrap:wrap;gap:14px;font-size:9.5px;color:#475467;margin:6px 0 2px}
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:8px 0}.tile{border:1px solid #EAECF0;border-radius:6px;padding:7px 8px}.tile .v{font-size:17px;font-weight:700}.tile .l{font-size:8px;text-transform:uppercase;letter-spacing:.4px;color:#667085;font-weight:700}
+.v.f{color:#D92D20}.v.w{color:#DC6803}.v.p{color:#6D42FF}
+ul.kf{margin:4px 0 0 16px;padding:0}ul.kf li{margin:2px 0}
+table{width:100%;border-collapse:collapse;margin:4px 0 8px;font-size:8.6px}th{background:#F4F1FF;color:#3E1C96;text-align:left;font-weight:700;padding:4px 5px;border-bottom:1px solid #D9D6FE}
+td{padding:3.5px 5px;border-bottom:1px solid #F2F4F7;vertical-align:top}tr{break-inside:avoid}td.n{text-align:right;white-space:nowrap}
+.mono{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:8.2px;word-break:break-all}.ex{color:#475467;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:7.8px;word-break:break-word}
+.pri{font-weight:800;font-size:8px;border-radius:3px;padding:1px 4px}.pri.P1{background:#FEF3F2;color:#B42318}.pri.P2{background:#FFFAEB;color:#B54708}.pri.P3{background:#F2F4F7;color:#475467}
+.st{font-weight:700;font-size:8px}.st.FAIL{color:#D92D20}.st.WARN{color:#DC6803}.fix{color:#6941C6}
+.note{background:#F9FAFB;border:1px solid #EAECF0;border-radius:6px;padding:6px 8px;color:#475467}.sec{break-before:page}`;
+  const kpis = [[N, 'Users tested', ''], [A.nClients, 'Clients', ''], [M.fails.length, 'Failing issues', 'f'], [M.P.P1.length, 'P1 issues', 'f'],
+    [failingAttrs.length + (M.T.attrs.size ? ` / ${[...M.T.attrs.values()].filter(a => a.tested.size).length}` : ''), 'MF attributes failing', 'p'], [M.unknown.length + M.login.length, 'IDs not testable', 'w']];
+  let h = `<!doctype html><html><head><meta charset="utf-8"><title>WealthScape MF API QA Report</title><style>${css}</style></head><body>
+  <div class="cover"><div class="k">WealthScape · QA findings</div><h1>Mutual Fund API QA Report</h1>
+    <p>Every check run against every tested client and user — MF holdings, insights, transactions, reconciliation, the client issue list, the MF attribute sheet and the other asset classes.</p></div>
+  <div class="meta"><span><b>Generated</b> ${rpE(gen)}</span><span><b>Results</b> ${rpE(fmtAt(M.from))} – ${rpE(fmtAt(M.to))}</span><span><b>Clients</b> ${A.nClients} tested of ${A.nClients + M.idle.length} configured</span><span><b>Users</b> ${N} tested · ${M.unknown.length} unknown ids · ${M.login.length} login failures</span></div>
+  <div class="tiles">${kpis.map(([v, l, c]) => `<div class="tile"><div class="v ${c}">${rpE(v)}</div><div class="l">${rpE(l)}</div></div>`).join('')}</div>
+  <h2>Key findings</h2><ul class="kf">${top.map(i => `<li><b>${rpE(i.desc)}</b> <span class="mut">(${rpE(i.id)} · ${rpE(i.fi)})</span> — ${i.nu} of ${N} users on ${i.nc} client${i.nc !== 1 ? 's' : ''}: ${clientsCell(i)}.</li>`).join('')}
+    ${failingAttrs.length ? `<li><b>${failingAttrs.length} MF attributes fail their sheet assertion</b> for at least one user; the widest: ${failingAttrs.slice().sort((a, b) => b.fail.size - a.fail.size).slice(0, 3).map(a => `<span class="mono">${rpE(a.attr)}</span> on ${rpE(a.ep)} (${a.fail.size} users)`).join('; ')}.</li>` : ''}
+    ${M.unknown.length + M.login.length ? `<li><b>${M.unknown.length + M.login.length} ids could not be tested</b> (${M.login.length} login failures, ${M.unknown.length} not registered on their host) — see Coverage.</li>` : ''}</ul>
+  <h2>Priority issues</h2><p class="mut">P1 = failing on 3+ clients, 10+ users or half the users tested · P2 = any other failure, or a warning on 3+ clients. Users that could not be tested are excluded from the denominators.</p>
+  <table><thead><tr><th>#</th><th>P</th><th>Check</th><th>Issue</th><th>FI type</th><th>Users</th><th>Clients</th><th>Example</th></tr></thead><tbody>
+  ${prio.map((i, k) => `<tr><td class="n">${k + 1}</td><td>${pri(i.pri)}</td><td class="mono">${rpE(i.id)}</td><td>${rpE(i.desc)} ${st(i.status)}</td><td>${rpE(i.fi)}</td><td class="n">${usersCell(i)}</td><td>${clientsCell(i)}</td><td class="ex">${rpE(rpCut((i.examples[0] || {}).details, 170))}</td></tr>`).join('')}
+  </tbody></table>
+  <h2 class="sec">Findings by client</h2>
+  <table><thead><tr><th>Client</th><th>Env</th><th>IDs</th><th>Tested</th><th>Not tested</th><th>Failing</th><th>Warnings</th><th>Most widespread failures for this client</th></tr></thead><tbody>
+  ${M.clients.map(c => `<tr><td><b>${rpE(c.name)}</b></td><td>${rpE(c.env)}</td><td class="n">${c.ids}</td><td class="n">${c.tested}</td><td class="n">${c.unknown + c.login ? `${c.unknown ? c.unknown + ' unknown' : ''}${c.unknown && c.login ? ', ' : ''}${c.login ? c.login + ' login' : ''}` : '—'}</td><td class="n">${c.failing}</td><td class="n">${c.warning}</td><td>${c.top.map(t => `${rpE(rpCut(t.desc, 90))} <span class="mut">(${t.users})</span>`).join('<br>') || '<span class="mut">—</span>'}</td></tr>`).join('')}
+  </tbody></table>
+  <h2>Findings by FI type</h2>
+  <table><thead><tr><th>FI type</th><th>Failing issues</th><th>Warnings</th><th>Users affected by failures</th></tr></thead><tbody>
+  ${M.fiRows.map(r => `<tr><td><b>${rpE(r.fi)}</b></td><td class="n">${r.fail}</td><td class="n">${r.warn}</td><td class="n">${r.users} / ${N}</td></tr>`).join('')}</tbody></table>`;
+  if (M.attrs.length) {
+    h += `<h2 class="sec">Mutual fund attributes by API endpoint</h2>
+    <p class="mut">One check per row of the MF attribute sheet (${M.sheetChecks != null ? M.sheetChecks + ' rows carry a check' : 'checks MFA-&lt;row&gt;'}). An attribute fails for a user when any of its assertions fails.</p>
+    <table><thead><tr><th>Endpoint</th><th>Attributes checked</th><th>Failing</th><th>Warnings only</th><th>Users affected</th></tr></thead><tbody>
+    ${M.eps.map(e => `<tr><td class="mono">POST ${rpE(e.ep)}</td><td class="n">${e.checked}</td><td class="n">${e.fail.length}</td><td class="n">${e.warn.length}</td><td class="n">${e.users} / ${N}</td></tr>`).join('')}</tbody></table>`;
+    for (const e of M.eps) {
+      const xs = e.fail.concat(e.warn);
+      if (!xs.length) continue;
+      h += `<h3>POST ${rpE(e.ep)} — ${e.fail.length} failing, ${e.warn.length} with warnings</h3>
+      <table><thead><tr><th>Row</th><th>Attribute</th><th>Status</th><th>Users failing</th><th>Clients</th><th>Example</th><th>Fix noted in the sheet</th></tr></thead><tbody>
+      ${xs.map(a => { const k = [...a.checks.values()].find(x => x.fail.size || x.warn.size); const sh = _mfaCat ? _mfaCat[a.row] : null;
+        return `<tr><td class="n">${a.row || ''}</td><td class="mono">${rpE(a.attr)}</td><td>${st(a.status)}</td><td class="n"><b>${a.fail.size}</b>${a.warnOnly.size ? ` +${a.warnOnly.size}w` : ''} / ${a.tested.size}</td>
+          <td>${[...a.clients.values()].slice(0, 3).map(c => `${rpE(c.name)} ×${c.users.size}`).join(', ')}${a.clients.size > 3 ? `, +${a.clients.size - 3}` : ''}</td>
+          <td class="ex">${rpE(rpCut(k && k.examples[0] ? k.examples[0].details : '', 150))}</td><td class="fix">${rpE(rpCut(sh && sh.fixes, 140))}</td></tr>`; }).join('')}
+      </tbody></table>`;
+    }
+  }
+  h += `<h2 class="sec">Coverage</h2>
+  <table><thead><tr><th>Client</th><th>Env</th><th>Not tested</th><th>Why</th></tr></thead><tbody>
+  ${M.clients.filter(c => c.unknown || c.login).map(c => `<tr><td><b>${rpE(c.name)}</b></td><td>${rpE(c.env)}</td><td class="n">${c.unknown + c.login} of ${c.ids}</td><td>${c.login ? `${c.login} channel login failure${c.login !== 1 ? 's' : ''} (credentials or host)` : ''}${c.login && c.unknown ? '; ' : ''}${c.unknown ? `${c.unknown} uniqueIdentifier${c.unknown !== 1 ? 's' : ''} not registered on the host` : ''}</td></tr>`).join('')}
+  ${M.idle.map(c => `<tr><td>${rpE(c.name)}</td><td>${rpE(c.env)}</td><td class="n">—</td><td class="mut">${rpE(c.why)}</td></tr>`).join('')}
+  </tbody></table>
+  <h2 class="sec">Appendix — every issue found</h2>
+  <table><thead><tr><th>#</th><th>P</th><th>Status</th><th>Check</th><th>Issue</th><th>FI type</th><th>Users</th><th>Clients</th><th>Occ.</th></tr></thead><tbody>
+  ${M.issues.map((i, k) => `<tr><td class="n">${k + 1}</td><td>${pri(i.pri)}</td><td>${st(i.status)}</td><td class="mono">${rpE(i.id)}</td><td>${rpE(i.desc)}</td><td>${rpE(i.fi)}</td><td class="n">${i.nu}/${N}</td><td class="n">${i.nc}</td><td class="n">${i.occ}</td></tr>`).join('')}
+  </tbody></table>
+  <h2>Method</h2><div class="note">Each client's latest stored run is used (${rpE(fmtAt(M.from))} – ${rpE(fmtAt(M.to))}). Every call is a read with the client's channel login; negative probes that send invalid requests run only when negative tests are on.
+  An issue is one distinct check across users; "Users" counts users for whom it failed or warned, out of the users that could be tested. Warnings are indicative (rounding, incomplete history, data-quality) and never count as failures.
+  MF attribute checks follow the attribute sheet row by row; values the APIs round to 2 dp are compared with that rounding allowed for.</div>
+  </body></html>`;
+  return h;
+}
+
+function reportSheets(M) {
+  const A = M.A, N = A.nTested;
+  const cl = i => [...i.clients.values()].map(c => `${c.name} ×${c.users.size}`).join('; ');
+  const sheets = [
+    { name: 'Summary', header: ['Metric', 'Value'], widths: [34, 60], rows: [
+      ['Generated', formatDate(M.generated.toISOString())], ['Results from', M.from ? formatDate(M.from) : ''], ['Results to', M.to ? formatDate(M.to) : ''],
+      ['Clients tested', A.nClients], ['Clients configured but not run', M.idle.length], ['Users tested', N], ['Unknown ids', M.unknown.length], ['Login failures', M.login.length],
+      ['Distinct failing issues', M.fails.length], ['P1 issues', M.P.P1.length], ['P2 issues', M.P.P2.length], ['Distinct warnings', M.warns.length],
+      ['MF attributes checked', [...M.T.attrs.values()].filter(a => a.tested.size).length], ['MF attributes failing', M.attrs.filter(a => a.status === 'FAIL').length]] },
+    { name: 'Issues', header: ['Rank', 'Priority', 'Status', 'Check', 'Issue', 'FI type', 'Phase', 'Users affected', 'Users tested', 'Share %', 'Clients affected', 'Clients', 'Occurrences', 'Example'],
+      widths: [6, 8, 8, 13, 60, 18, 32, 9, 9, 8, 9, 40, 9, 80],
+      rows: M.issues.map((i, k) => [k + 1, i.pri, i.status, i.id, i.desc, i.fi, i.phase, i.nu, N, rpPct(i.nu, N), i.nc, cl(i), i.occ, (i.examples[0] || {}).details || '']) },
+    { name: 'Clients', header: ['Client', 'Env', 'IDs', 'Users tested', 'Unknown ids', 'Login failures', 'Failing issues', 'Warnings', 'Latest result', 'Most widespread failures'],
+      widths: [22, 7, 7, 9, 9, 9, 9, 9, 20, 90],
+      rows: M.clients.map(c => [c.name, c.env, c.ids, c.tested, c.unknown, c.login, c.failing, c.warning, c.at ? formatDate(c.at) : '', c.top.map(t => `${t.id} ${t.desc} (${t.users})`).join(' | ')]) },
+    { name: 'Users', header: ['Client', 'User', 'State', 'Checks run', 'Failed', 'Warnings', 'Passed', 'Failing checks (first 6)'], widths: [22, 10, 12, 10, 8, 9, 8, 70],
+      rows: M.clients.flatMap(c => c.users.map(u => [c.name, u.user, u.state, u.run, u.failed, u.warned, u.passed, u.top])) },
+    { name: 'FI types', header: ['FI type', 'Failing issues', 'Warnings', 'Users affected by failures', 'Users tested'], widths: [28, 12, 10, 20, 12],
+      rows: M.fiRows.map(r => [r.fi, r.fail, r.warn, r.users, N]) },
+  ];
+  if (M.attrs.length) sheets.push({ name: 'MF attributes', header: ['Endpoint', 'Attribute', 'Sheet row', 'Status', 'Users failing', 'Users with warnings only', 'Users tested', 'Not run for', 'Clients', 'Assertions', 'Example', 'Fix noted in the sheet'],
+    widths: [42, 50, 9, 8, 10, 12, 10, 10, 40, 10, 80, 60],
+    rows: M.attrs.map(a => { const k = [...a.checks.values()].find(x => x.fail.size || x.warn.size); const sh = _mfaCat ? _mfaCat[a.row] : null;
+      return ['POST ' + a.ep, a.attr, a.row || '', a.status, a.fail.size, a.warnOnly.size, a.tested.size, a.skip.size, [...a.clients.values()].map(c => `${c.name} ×${c.users.size}`).join('; '),
+        a.checks.size, k && k.examples[0] ? k.examples[0].details : '', sh ? sh.fixes || '' : '']; }) });
+  sheets.push({ name: 'Not tested', header: ['Client', 'User', 'Reason'], widths: [24, 12, 50],
+    rows: M.clients.flatMap(c => c.users.filter(u => u.state !== 'tested').map(u => [c.name, u.user, u.state === 'login failed' ? 'Channel login failed (credentials or host)' : 'uniqueIdentifier not registered on the host']))
+      .concat(M.idle.map(c => [c.name, '', c.why])) });
+  return sheets;
+}
+
+async function showReportView(autoSave) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.id === 'nav-analysis'));
+  const main = document.getElementById('main-content');
+  main.innerHTML = '<div class="an-empty">Building the report from the latest result of every client…</div>';
+  const M = await buildReportModel();
+  if (!M.A || !M.A.nTested) { main.innerHTML = '<div class="none-card">No tested users yet — run the checks first, then generate the report.</div>'; return; }
+  _rp = { model: M, html: reportHtml(M), sheets: reportSheets(M), saved: null };
+  renderReportView();
+  if (autoSave && _runnerUp) saveReport();
+}
+
+async function renderReportView() {
+  const main = document.getElementById('main-content');
+  let prev = '';
+  if (_runnerUp) {
+    try {
+      const r = await rfetch('/api/report/files');
+      const pdfs = (r.files || []).filter(f => f.name.endsWith('.pdf')).slice(0, 4);
+      if (pdfs.length) prev = `<div class="rp-prev">Earlier reports in ${rpE(r.dir)}: ${pdfs.map(f => `<a href="${RUNNER}/api/report/files/${encodeURIComponent(f.name)}" target="_blank">${rpE(f.name)}</a>`).join(' · ')}</div>`;
+    } catch (_) {}
+  }
+  const sv = _rp.saved;
+  const msg = sv ? (sv.error ? `<span style="color:var(--red)">${rpE(sv.error)}</span>` : `Saved to ${rpE(sv.dir)}${['pdf', 'xlsx', 'html'].filter(k => sv.files[k]).map(k => `<a href="${RUNNER}/api/report/files/${encodeURIComponent(sv.files[k])}" target="_blank">${k === 'xlsx' ? 'Excel' : k.toUpperCase()}</a>`).join('')}${sv.errors && sv.errors.length ? ` <span style="color:var(--amber)">${rpE(sv.errors.join('; '))}</span>` : ''}`)
+    : _runnerUp ? 'Saves HTML, PDF and Excel to your Downloads folder' : 'Start the local runner to save PDF and Excel; Print works without it';
+  main.innerHTML = `<div class="an-wrap">
+    ${anHead('Report', `All clients and users: <b>${_rp.model.A.nTested}</b> users tested on <b>${_rp.model.A.nClients}</b> clients, ${_rp.model.issues.length} distinct issues. Preview below.`, '')}
+    <div class="rp-bar">
+      <button class="tool-btn" style="border-color:var(--purple);background:var(--purple);color:#fff" ${_runnerUp ? '' : 'disabled'} onclick="saveReport()" id="rp-save">Save PDF + Excel</button>
+      <button class="tool-btn" onclick="printReport()">Print</button>
+      <button class="tool-btn" onclick="showReportView()">Rebuild</button>
+      <button class="tool-btn" onclick="_an.view='issue';renderAnalysis()">← Analysis</button>
+      <span class="msg" id="rp-msg">${msg}</span>
+    </div>
+    ${prev}
+    <iframe class="rp-frame" id="rp-frame" title="Report preview"></iframe>
+  </div>`;
+  document.getElementById('rp-frame').srcdoc = _rp.html;
+}
+
+async function saveReport() {
+  if (!_rp || !_runnerUp) return;
+  const btn = document.getElementById('rp-save'), msg = document.getElementById('rp-msg');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  if (msg) msg.textContent = 'Printing the PDF and writing the workbook…';
+  const d = _rp.model.generated, pad = n => String(n).padStart(2, '0');
+  const stem = `WealthScape MF QA Report ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}${pad(d.getMinutes())}`;
+  try {
+    const r = await rfetch('/api/report/export', { method: 'POST',
+      body: { stem, html: _rp.html, sheets: _rp.sheets, footer: `WealthScape MF API QA Report · ${formatDate(d.toISOString()).replace(' IST', '')}` } });
+    _rp.saved = r;
+    showToast(r.errors && r.errors.length ? 'Saved with problems: ' + r.errors.join('; ') : 'Report saved: PDF and Excel in your Downloads folder', r.errors && r.errors.length ? 'error' : 'success');
+  } catch (e) {
+    _rp.saved = { error: 'Could not save: ' + e.message };
+    showToast('Could not save the report', 'error');
+  }
+  renderReportView();
+}
+
+function printReport() {
+  const f = document.getElementById('rp-frame');
+  if (f && f.contentWindow) { f.contentWindow.focus(); f.contentWindow.print(); }
 }
 
 // ── Run modal: clients, options, progress ──────────────────────
@@ -2069,7 +2300,12 @@ function showToast(msg, type = 'success') {
 // Close modal on Escape
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRunModal(); });
 
-loadReport(); setInterval(refreshRunner, 5000);
+loadReport().then(() => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('view') === 'report') showReportView(q.get('save') === '1');
+  else if (q.get('view') === 'analysis') showAnalysis();
+});
+setInterval(refreshRunner, 5000);
 </script>
 </body>
 </html>
