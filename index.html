@@ -1901,6 +1901,8 @@ let _rp = null;   // { model, html, sheets, saved }
 function rpE(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function rpCut(v, n) { const t = String(v || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; }
 function rpPct(a, b) { return b ? Math.round(a * 100 / b) : 0; }
+function rpPath(v) { return rpE(v).replace(/\./g, '.&#8203;').replace(/\[\]/g, '[]&#8203;'); }   // let JSON paths wrap at the dots
+function rpCols(...w) { return `<colgroup>${w.map(x => `<col style="width:${x}%">`).join('')}</colgroup>`; }
 
 async function buildReportModel() {
   if (!_an.data || !_an.docs.length) await showAnalysis();
@@ -1964,16 +1966,16 @@ h3{font-size:11px;margin:12px 0 4px;color:#344054;break-after:avoid}p{margin:4px
 .tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:8px 0}.tile{border:1px solid #EAECF0;border-radius:6px;padding:7px 8px}.tile .v{font-size:17px;font-weight:700}.tile .l{font-size:8px;text-transform:uppercase;letter-spacing:.4px;color:#667085;font-weight:700}
 .v.f{color:#D92D20}.v.w{color:#DC6803}.v.p{color:#6D42FF}
 ul.kf{margin:4px 0 0 16px;padding:0}ul.kf li{margin:2px 0}
-table{width:100%;border-collapse:collapse;margin:4px 0 8px;font-size:8.6px}th{background:#F4F1FF;color:#3E1C96;text-align:left;font-weight:700;padding:4px 5px;border-bottom:1px solid #D9D6FE}
+table{width:100%;border-collapse:collapse;margin:4px 0 8px;font-size:8.6px;table-layout:fixed}td.id{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}th{background:#F4F1FF;color:#3E1C96;text-align:left;font-weight:700;padding:4px 5px;border-bottom:1px solid #D9D6FE}
 td{padding:3.5px 5px;border-bottom:1px solid #F2F4F7;vertical-align:top}tr{break-inside:avoid}td.n{text-align:right;white-space:nowrap}
-.mono{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:8.2px;word-break:break-all}.ex{color:#475467;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:7.8px;word-break:break-word}
+.mono{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:8.2px;overflow-wrap:anywhere}.ex{color:#475467;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:7.8px;word-break:break-word}
 .pri{font-weight:800;font-size:8px;border-radius:3px;padding:1px 4px}.pri.P1{background:#FEF3F2;color:#B42318}.pri.P2{background:#FFFAEB;color:#B54708}.pri.P3{background:#F2F4F7;color:#475467}
 .st{font-weight:700;font-size:8px}.st.FAIL{color:#D92D20}.st.WARN{color:#DC6803}.fix{color:#6941C6}
-.note{background:#F9FAFB;border:1px solid #EAECF0;border-radius:6px;padding:6px 8px;color:#475467}.sec{break-before:page}`;
+.note{background:#F9FAFB;border:1px solid #EAECF0;border-radius:6px;padding:6px 8px;color:#475467}.sec{break-before:page}h2{break-after:avoid}h3+table,h2+table,p+table{break-before:avoid}`;
   const kpis = [[N, 'Users tested', ''], [A.nClients, 'Clients', ''], [M.fails.length, 'Failing issues', 'f'], [M.P.P1.length, 'P1 issues', 'f'],
     [failingAttrs.length + (M.T.attrs.size ? ` / ${[...M.T.attrs.values()].filter(a => a.tested.size).length}` : ''), 'MF attributes failing', 'p'], [M.unknown.length + M.login.length, 'IDs not testable', 'w']];
-  let h = `<!doctype html><html><head><meta charset="utf-8"><title>WealthScape MF API QA Report</title><style>${css}</style></head><body>
-  <div class="cover"><div class="k">WealthScape · QA findings</div><h1>Mutual Fund API QA Report</h1>
+  let h = `<!doctype html><html><head><meta charset="utf-8"><title>WealthScape API QA Report</title><style>${css}</style></head><body>
+  <div class="cover"><div class="k">WealthScape · QA findings</div><h1>WealthScape API QA Report</h1>
     <p>Every check run against every tested client and user — MF holdings, insights, transactions, reconciliation, the client issue list, the MF attribute sheet and the other asset classes.</p></div>
   <div class="meta"><span><b>Generated</b> ${rpE(gen)}</span><span><b>Results</b> ${rpE(fmtAt(M.from))} – ${rpE(fmtAt(M.to))}</span><span><b>Clients</b> ${A.nClients} tested of ${A.nClients + M.idle.length} configured</span><span><b>Users</b> ${N} tested · ${M.unknown.length} unknown ids · ${M.login.length} login failures</span></div>
   <div class="tiles">${kpis.map(([v, l, c]) => `<div class="tile"><div class="v ${c}">${rpE(v)}</div><div class="l">${rpE(l)}</div></div>`).join('')}</div>
@@ -1981,41 +1983,41 @@ td{padding:3.5px 5px;border-bottom:1px solid #F2F4F7;vertical-align:top}tr{break
     ${failingAttrs.length ? `<li><b>${failingAttrs.length} MF attributes fail their sheet assertion</b> for at least one user; the widest: ${failingAttrs.slice().sort((a, b) => b.fail.size - a.fail.size).slice(0, 3).map(a => `<span class="mono">${rpE(a.attr)}</span> on ${rpE(a.ep)} (${a.fail.size} users)`).join('; ')}.</li>` : ''}
     ${M.unknown.length + M.login.length ? `<li><b>${M.unknown.length + M.login.length} ids could not be tested</b> (${M.login.length} login failures, ${M.unknown.length} not registered on their host) — see Coverage.</li>` : ''}</ul>
   <h2>Priority issues</h2><p class="mut">P1 = failing on 3+ clients, 10+ users or half the users tested · P2 = any other failure, or a warning on 3+ clients. Users that could not be tested are excluded from the denominators.</p>
-  <table><thead><tr><th>#</th><th>P</th><th>Check</th><th>Issue</th><th>FI type</th><th>Users</th><th>Clients</th><th>Example</th></tr></thead><tbody>
-  ${prio.map((i, k) => `<tr><td class="n">${k + 1}</td><td>${pri(i.pri)}</td><td class="mono">${rpE(i.id)}</td><td>${rpE(i.desc)} ${st(i.status)}</td><td>${rpE(i.fi)}</td><td class="n">${usersCell(i)}</td><td>${clientsCell(i)}</td><td class="ex">${rpE(rpCut((i.examples[0] || {}).details, 170))}</td></tr>`).join('')}
+  <table>${rpCols(3, 4, 10, 30, 9, 10, 15, 19)}<thead><tr><th>#</th><th>P</th><th>Check</th><th>Issue</th><th>FI type</th><th>Users</th><th>Clients</th><th>Example</th></tr></thead><tbody>
+  ${prio.map((i, k) => `<tr><td class="n">${k + 1}</td><td>${pri(i.pri)}</td><td class="mono id">${rpE(i.id)}</td><td>${rpPath(i.desc)} ${st(i.status)}</td><td>${rpE(i.fi)}</td><td class="n">${usersCell(i)}</td><td>${clientsCell(i)}</td><td class="ex">${rpE(rpCut((i.examples[0] || {}).details, 150))}</td></tr>`).join('')}
   </tbody></table>
-  <h2 class="sec">Findings by client</h2>
-  <table><thead><tr><th>Client</th><th>Env</th><th>IDs</th><th>Tested</th><th>Not tested</th><th>Failing</th><th>Warnings</th><th>Most widespread failures for this client</th></tr></thead><tbody>
-  ${M.clients.map(c => `<tr><td><b>${rpE(c.name)}</b></td><td>${rpE(c.env)}</td><td class="n">${c.ids}</td><td class="n">${c.tested}</td><td class="n">${c.unknown + c.login ? `${c.unknown ? c.unknown + ' unknown' : ''}${c.unknown && c.login ? ', ' : ''}${c.login ? c.login + ' login' : ''}` : '—'}</td><td class="n">${c.failing}</td><td class="n">${c.warning}</td><td>${c.top.map(t => `${rpE(rpCut(t.desc, 90))} <span class="mut">(${t.users})</span>`).join('<br>') || '<span class="mut">—</span>'}</td></tr>`).join('')}
+  <h2>Findings by client</h2>
+  <table>${rpCols(13, 6, 5, 7, 10, 7, 8, 44)}<thead><tr><th>Client</th><th>Env</th><th>IDs</th><th>Tested</th><th>Not tested</th><th>Failing</th><th>Warnings</th><th>Most widespread failures for this client</th></tr></thead><tbody>
+  ${M.clients.map(c => `<tr><td><b>${rpE(c.name)}</b></td><td>${rpE(c.env)}</td><td class="n">${c.ids}</td><td class="n">${c.tested}</td><td class="n">${c.unknown + c.login ? `${c.unknown ? c.unknown + ' unknown' : ''}${c.unknown && c.login ? ', ' : ''}${c.login ? c.login + ' login' : ''}` : '—'}</td><td class="n">${c.failing}</td><td class="n">${c.warning}</td><td>${c.top.map(t => `${rpPath(rpCut(t.desc, 110))} <span class="mut">(${t.users})</span>`).join('<br>') || '<span class="mut">—</span>'}</td></tr>`).join('')}
   </tbody></table>
   <h2>Findings by FI type</h2>
-  <table><thead><tr><th>FI type</th><th>Failing issues</th><th>Warnings</th><th>Users affected by failures</th></tr></thead><tbody>
+  <table>${rpCols(40, 20, 20, 20)}<thead><tr><th>FI type</th><th>Failing issues</th><th>Warnings</th><th>Users affected by failures</th></tr></thead><tbody>
   ${M.fiRows.map(r => `<tr><td><b>${rpE(r.fi)}</b></td><td class="n">${r.fail}</td><td class="n">${r.warn}</td><td class="n">${r.users} / ${N}</td></tr>`).join('')}</tbody></table>`;
   if (M.attrs.length) {
-    h += `<h2 class="sec">Mutual fund attributes by API endpoint</h2>
+    h += `<h2>Mutual fund attributes by API endpoint</h2>
     <p class="mut">One check per row of the MF attribute sheet (${M.sheetChecks != null ? M.sheetChecks + ' rows carry a check' : 'checks MFA-&lt;row&gt;'}). An attribute fails for a user when any of its assertions fails.</p>
-    <table><thead><tr><th>Endpoint</th><th>Attributes checked</th><th>Failing</th><th>Warnings only</th><th>Users affected</th></tr></thead><tbody>
+    <table>${rpCols(48, 13, 13, 13, 13)}<thead><tr><th>Endpoint</th><th>Attributes checked</th><th>Failing</th><th>Warnings only</th><th>Users affected</th></tr></thead><tbody>
     ${M.eps.map(e => `<tr><td class="mono">POST ${rpE(e.ep)}</td><td class="n">${e.checked}</td><td class="n">${e.fail.length}</td><td class="n">${e.warn.length}</td><td class="n">${e.users} / ${N}</td></tr>`).join('')}</tbody></table>`;
     for (const e of M.eps) {
       const xs = e.fail.concat(e.warn);
       if (!xs.length) continue;
       h += `<h3>POST ${rpE(e.ep)} — ${e.fail.length} failing, ${e.warn.length} with warnings</h3>
-      <table><thead><tr><th>Row</th><th>Attribute</th><th>Status</th><th>Users failing</th><th>Clients</th><th>Example</th><th>Fix noted in the sheet</th></tr></thead><tbody>
+      <table>${rpCols(5, 22, 6, 9, 15, 25, 18)}<thead><tr><th>Row</th><th>Attribute</th><th>Status</th><th>Users failing</th><th>Clients</th><th>Example</th><th>Fix noted in the sheet</th></tr></thead><tbody>
       ${xs.map(a => { const k = [...a.checks.values()].find(x => x.fail.size || x.warn.size); const sh = _mfaCat ? _mfaCat[a.row] : null;
-        return `<tr><td class="n">${a.row || ''}</td><td class="mono">${rpE(a.attr)}</td><td>${st(a.status)}</td><td class="n"><b>${a.fail.size}</b>${a.warnOnly.size ? ` +${a.warnOnly.size}w` : ''} / ${a.tested.size}</td>
+        return `<tr><td class="n">${a.row || ''}</td><td class="mono">${rpPath(a.attr)}</td><td>${st(a.status)}</td><td class="n"><b>${a.fail.size}</b>${a.warnOnly.size ? ` +${a.warnOnly.size}w` : ''} / ${a.tested.size}</td>
           <td>${[...a.clients.values()].slice(0, 3).map(c => `${rpE(c.name)} ×${c.users.size}`).join(', ')}${a.clients.size > 3 ? `, +${a.clients.size - 3}` : ''}</td>
           <td class="ex">${rpE(rpCut(k && k.examples[0] ? k.examples[0].details : '', 150))}</td><td class="fix">${rpE(rpCut(sh && sh.fixes, 140))}</td></tr>`; }).join('')}
       </tbody></table>`;
     }
   }
-  h += `<h2 class="sec">Coverage</h2>
-  <table><thead><tr><th>Client</th><th>Env</th><th>Not tested</th><th>Why</th></tr></thead><tbody>
+  h += `<h2>Coverage</h2>
+  <table>${rpCols(22, 8, 12, 58)}<thead><tr><th>Client</th><th>Env</th><th>Not tested</th><th>Why</th></tr></thead><tbody>
   ${M.clients.filter(c => c.unknown || c.login).map(c => `<tr><td><b>${rpE(c.name)}</b></td><td>${rpE(c.env)}</td><td class="n">${c.unknown + c.login} of ${c.ids}</td><td>${c.login ? `${c.login} channel login failure${c.login !== 1 ? 's' : ''} (credentials or host)` : ''}${c.login && c.unknown ? '; ' : ''}${c.unknown ? `${c.unknown} uniqueIdentifier${c.unknown !== 1 ? 's' : ''} not registered on the host` : ''}</td></tr>`).join('')}
   ${M.idle.map(c => `<tr><td>${rpE(c.name)}</td><td>${rpE(c.env)}</td><td class="n">—</td><td class="mut">${rpE(c.why)}</td></tr>`).join('')}
   </tbody></table>
   <h2 class="sec">Appendix — every issue found</h2>
-  <table><thead><tr><th>#</th><th>P</th><th>Status</th><th>Check</th><th>Issue</th><th>FI type</th><th>Users</th><th>Clients</th><th>Occ.</th></tr></thead><tbody>
-  ${M.issues.map((i, k) => `<tr><td class="n">${k + 1}</td><td>${pri(i.pri)}</td><td>${st(i.status)}</td><td class="mono">${rpE(i.id)}</td><td>${rpE(i.desc)}</td><td>${rpE(i.fi)}</td><td class="n">${i.nu}/${N}</td><td class="n">${i.nc}</td><td class="n">${i.occ}</td></tr>`).join('')}
+  <table>${rpCols(4, 4, 6, 11, 47, 12, 6, 5, 5)}<thead><tr><th>#</th><th>P</th><th>Status</th><th>Check</th><th>Issue</th><th>FI type</th><th>Users</th><th>Clients</th><th>Occ.</th></tr></thead><tbody>
+  ${M.issues.map((i, k) => `<tr><td class="n">${k + 1}</td><td>${pri(i.pri)}</td><td>${st(i.status)}</td><td class="mono id">${rpE(i.id)}</td><td>${rpPath(i.desc)}</td><td>${rpE(i.fi)}</td><td class="n">${i.nu}/${N}</td><td class="n">${i.nc}</td><td class="n">${i.occ}</td></tr>`).join('')}
   </tbody></table>
   <h2>Method</h2><div class="note">Each client's latest stored run is used (${rpE(fmtAt(M.from))} – ${rpE(fmtAt(M.to))}). Every call is a read with the client's channel login; negative probes that send invalid requests run only when negative tests are on.
   An issue is one distinct check across users; "Users" counts users for whom it failed or warned, out of the users that could be tested. Warnings are indicative (rounding, incomplete history, data-quality) and never count as failures.
@@ -2100,10 +2102,10 @@ async function saveReport() {
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   if (msg) msg.textContent = 'Printing the PDF and writing the workbook…';
   const d = _rp.model.generated, pad = n => String(n).padStart(2, '0');
-  const stem = `WealthScape MF QA Report ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}${pad(d.getMinutes())}`;
+  const stem = `WealthScape QA Report ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}${pad(d.getMinutes())}`;
   try {
     const r = await rfetch('/api/report/export', { method: 'POST',
-      body: { stem, html: _rp.html, sheets: _rp.sheets, footer: `WealthScape MF API QA Report · ${formatDate(d.toISOString()).replace(' IST', '')}` } });
+      body: { stem, html: _rp.html, sheets: _rp.sheets, footer: `WealthScape API QA Report · ${formatDate(d.toISOString()).replace(' IST', '')}` } });
     _rp.saved = r;
     showToast(r.errors && r.errors.length ? 'Saved with problems: ' + r.errors.join('; ') : 'Report saved: PDF and Excel in your Downloads folder', r.errors && r.errors.length ? 'error' : 'success');
   } catch (e) {
